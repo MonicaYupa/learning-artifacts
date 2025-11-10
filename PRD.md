@@ -119,35 +119,35 @@ This gives users a confidence ramp: observe → judge → create.
 ```json
 # Pseudo-code for module generation
 def generate_module(topic: str, skill_level: str, exercise_count: int):
-    
+
     system_prompt = """
     You are an expert instructional designer creating active learning exercises.
-    
+
     Requirements:
     - Application-first: users learn by doing, not reading
     - Realistic scenarios from the target domain
     - Clear validation criteria (what makes an answer good vs. poor)
     - Progressive difficulty within the module
-    
+
     Exercise types: analysis tasks, comparative evaluation, structured frameworks
     """
-    
+
     user_prompt = f"""
     Create a {skill_level} learning module on: {topic}
-    
+
     Generate {exercise_count} exercises following this structure:
-    
+
     Exercise 1 (Analysis): Present realistic material, ask user to identify/extract insights
     Exercise 2 (Comparative): Give 3-4 options, ask user to rank and justify
     Exercise 3 (Framework): Provide structure, ask user to apply to scenario
-    
+
     For each exercise include:
     1. Clear prompt with scenario/context
     2. Any material needed (customer feedback, data, examples)
     3. 3 progressive hints (conceptual → specific → near-solution)
     4. Validation criteria (what makes an answer strong/weak)
     5. Model answer explanation (not just the answer, but WHY)
-    
+
     Return as JSON matching this schema: [schema]
     """
 ```
@@ -206,13 +206,13 @@ Database (Supabase)
 erDiagram
     Users ||--o{ Sessions : "starts"
     Modules ||--o{ Sessions : "is_taken_in"
-    
+
     Users {
         uuid id PK
         varchar email
         timestamp created_at
     }
-    
+
     Modules {
         uuid id PK
         varchar title
@@ -221,7 +221,7 @@ erDiagram
         jsonb exercises
         timestamp created_at
     }
-    
+
     Sessions {
         uuid id PK
         uuid user_id FK

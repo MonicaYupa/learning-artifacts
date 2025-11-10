@@ -4,7 +4,7 @@ Tests for database connection and schema
 """
 
 import pytest
-from config.database import test_db_connection, get_db_connection, execute_query
+from config.database import execute_query, get_db_connection, test_db_connection
 
 
 @pytest.mark.asyncio
@@ -26,10 +26,10 @@ def test_users_table_exists():
 
     assert len(columns) > 0, "Users table does not exist"
 
-    column_names = [col['column_name'] for col in columns]
-    assert 'id' in column_names, "Users table missing 'id' column"
-    assert 'email' in column_names, "Users table missing 'email' column"
-    assert 'created_at' in column_names, "Users table missing 'created_at' column"
+    column_names = [col["column_name"] for col in columns]
+    assert "id" in column_names, "Users table missing 'id' column"
+    assert "email" in column_names, "Users table missing 'email' column"
+    assert "created_at" in column_names, "Users table missing 'created_at' column"
 
 
 def test_modules_table_exists():
@@ -44,12 +44,12 @@ def test_modules_table_exists():
 
     assert len(columns) > 0, "Modules table does not exist"
 
-    column_names = [col['column_name'] for col in columns]
-    assert 'id' in column_names, "Modules table missing 'id' column"
-    assert 'title' in column_names, "Modules table missing 'title' column"
-    assert 'domain' in column_names, "Modules table missing 'domain' column"
-    assert 'skill_level' in column_names, "Modules table missing 'skill_level' column"
-    assert 'exercises' in column_names, "Modules table missing 'exercises' column"
+    column_names = [col["column_name"] for col in columns]
+    assert "id" in column_names, "Modules table missing 'id' column"
+    assert "title" in column_names, "Modules table missing 'title' column"
+    assert "domain" in column_names, "Modules table missing 'domain' column"
+    assert "skill_level" in column_names, "Modules table missing 'skill_level' column"
+    assert "exercises" in column_names, "Modules table missing 'exercises' column"
 
 
 def test_sessions_table_exists():
@@ -64,13 +64,15 @@ def test_sessions_table_exists():
 
     assert len(columns) > 0, "Sessions table does not exist"
 
-    column_names = [col['column_name'] for col in columns]
-    assert 'id' in column_names, "Sessions table missing 'id' column"
-    assert 'user_id' in column_names, "Sessions table missing 'user_id' column"
-    assert 'module_id' in column_names, "Sessions table missing 'module_id' column"
-    assert 'current_exercise_index' in column_names, "Sessions table missing 'current_exercise_index' column"
-    assert 'attempts' in column_names, "Sessions table missing 'attempts' column"
-    assert 'status' in column_names, "Sessions table missing 'status' column"
+    column_names = [col["column_name"] for col in columns]
+    assert "id" in column_names, "Sessions table missing 'id' column"
+    assert "user_id" in column_names, "Sessions table missing 'user_id' column"
+    assert "module_id" in column_names, "Sessions table missing 'module_id' column"
+    assert (
+        "current_exercise_index" in column_names
+    ), "Sessions table missing 'current_exercise_index' column"
+    assert "attempts" in column_names, "Sessions table missing 'attempts' column"
+    assert "status" in column_names, "Sessions table missing 'status' column"
 
 
 def test_foreign_key_constraints():
@@ -92,17 +94,23 @@ def test_foreign_key_constraints():
     """
     constraints = execute_query(query)
 
-    assert len(constraints) >= 2, "Sessions table should have at least 2 foreign key constraints"
+    assert (
+        len(constraints) >= 2
+    ), "Sessions table should have at least 2 foreign key constraints"
 
     # Check for user_id foreign key
-    user_fk = [c for c in constraints if c['column_name'] == 'user_id']
+    user_fk = [c for c in constraints if c["column_name"] == "user_id"]
     assert len(user_fk) > 0, "Missing foreign key constraint on user_id"
-    assert user_fk[0]['foreign_table_name'] == 'users', "user_id should reference users table"
+    assert (
+        user_fk[0]["foreign_table_name"] == "users"
+    ), "user_id should reference users table"
 
     # Check for module_id foreign key
-    module_fk = [c for c in constraints if c['column_name'] == 'module_id']
+    module_fk = [c for c in constraints if c["column_name"] == "module_id"]
     assert len(module_fk) > 0, "Missing foreign key constraint on module_id"
-    assert module_fk[0]['foreign_table_name'] == 'modules', "module_id should reference modules table"
+    assert (
+        module_fk[0]["foreign_table_name"] == "modules"
+    ), "module_id should reference modules table"
 
 
 def test_indexes_exist():
@@ -119,7 +127,9 @@ def test_indexes_exist():
     assert len(indexes) > 0, "No indexes found on tables"
 
     # Check for some key indexes
-    index_names = [idx['indexname'] for idx in indexes]
-    assert 'idx_users_email' in index_names, "Missing index on users.email"
-    assert 'idx_sessions_user_id' in index_names, "Missing index on sessions.user_id"
-    assert 'idx_sessions_module_id' in index_names, "Missing index on sessions.module_id"
+    index_names = [idx["indexname"] for idx in indexes]
+    assert "idx_users_email" in index_names, "Missing index on users.email"
+    assert "idx_sessions_user_id" in index_names, "Missing index on sessions.user_id"
+    assert (
+        "idx_sessions_module_id" in index_names
+    ), "Missing index on sessions.module_id"

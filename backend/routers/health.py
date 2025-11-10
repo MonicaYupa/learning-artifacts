@@ -3,11 +3,11 @@ Health Check Router
 Provides endpoints to check API and database health
 """
 
-from fastapi import APIRouter, status
 from datetime import datetime
 
-from models.schemas import HealthResponse
 from config.database import test_db_connection
+from fastapi import APIRouter, status
+from models.schemas import HealthResponse
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ router = APIRouter()
     response_model=HealthResponse,
     status_code=status.HTTP_200_OK,
     summary="Health Check",
-    description="Check API and database connection status"
+    description="Check API and database connection status",
 )
 async def health_check():
     """
@@ -32,7 +32,7 @@ async def health_check():
     return HealthResponse(
         status="healthy" if db_status == "connected" else "degraded",
         database=db_status,
-        timestamp=datetime.now()
+        timestamp=datetime.now(),
     )
 
 
@@ -40,7 +40,7 @@ async def health_check():
     "/ping",
     status_code=status.HTTP_200_OK,
     summary="Ping",
-    description="Simple ping endpoint to check if API is running"
+    description="Simple ping endpoint to check if API is running",
 )
 async def ping():
     """

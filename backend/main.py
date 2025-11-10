@@ -3,13 +3,14 @@ Learning Artifacts Backend API
 FastAPI application for AI-powered learning modules
 """
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from config.settings import settings
 from config.database import test_db_connection
+from config.settings import settings
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from routers import health
+
 
 # Lifespan context manager for startup/shutdown events
 @asynccontextmanager
@@ -32,12 +33,13 @@ async def lifespan(app: FastAPI):
     # Shutdown
     print("Shutting down Learning Artifacts API...")
 
+
 # Create FastAPI application
 app = FastAPI(
     title="Learning Artifacts API",
     description="AI-powered learning mode with interactive, progressive exercises",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Configure CORS
@@ -52,6 +54,7 @@ app.add_middleware(
 # Include routers
 app.include_router(health.router, tags=["health"])
 
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -62,14 +65,11 @@ async def root():
         "name": "Learning Artifacts API",
         "version": "1.0.0",
         "status": "running",
-        "docs": "/docs"
+        "docs": "/docs",
     }
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True
-    )
+
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -3,12 +3,12 @@ Database Connection Utility
 Handles PostgreSQL connections to Supabase database
 """
 
-import psycopg
-from psycopg.rows import dict_row
 from contextlib import contextmanager
 from typing import Optional
 
+import psycopg
 from config.settings import settings
+from psycopg.rows import dict_row
 
 
 @contextmanager
@@ -26,8 +26,7 @@ def get_db_connection():
     conn = None
     try:
         conn = psycopg.connect(
-            settings.DATABASE_URL,
-            row_factory=dict_row  # Return rows as dictionaries
+            settings.DATABASE_URL, row_factory=dict_row  # Return rows as dictionaries
         )
         yield conn
         conn.commit()
@@ -57,13 +56,16 @@ def execute_query(query: str, params: Optional[tuple] = None, fetch_one: bool = 
             cursor.execute(query, params)
 
             # For INSERT/UPDATE/DELETE that return data
-            if query.strip().upper().startswith(('INSERT', 'UPDATE', 'DELETE')) and 'RETURNING' in query.upper():
+            if (
+                query.strip().upper().startswith(("INSERT", "UPDATE", "DELETE"))
+                and "RETURNING" in query.upper()
+            ):
                 if fetch_one:
                     return cursor.fetchone()
                 return cursor.fetchall()
 
             # For SELECT queries
-            if query.strip().upper().startswith('SELECT'):
+            if query.strip().upper().startswith("SELECT"):
                 if fetch_one:
                     return cursor.fetchone()
                 return cursor.fetchall()

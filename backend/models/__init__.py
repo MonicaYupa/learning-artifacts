@@ -3,23 +3,23 @@ Models package
 """
 
 from .schemas import (
-    SkillLevel,
-    SessionStatus,
-    ExerciseType,
-    Assessment,
-    UserResponse,
-    ModuleGenerateRequest,
-    ModuleResponse,
-    ModuleListItem,
-    SessionCreateRequest,
-    SessionUpdateRequest,
-    SessionResponse,
     AnswerSubmitRequest,
     AnswerSubmitResponse,
+    Assessment,
+    ErrorResponse,
+    ExerciseType,
+    HealthResponse,
     HintRequest,
     HintResponse,
-    HealthResponse,
-    ErrorResponse,
+    ModuleGenerateRequest,
+    ModuleListItem,
+    ModuleResponse,
+    SessionCreateRequest,
+    SessionResponse,
+    SessionStatus,
+    SessionUpdateRequest,
+    SkillLevel,
+    UserResponse,
 )
 
 __all__ = [

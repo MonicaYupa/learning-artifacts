@@ -3,16 +3,16 @@ JWT Authentication Middleware
 Verifies Supabase JWT tokens using JWT signing keys (RS256)
 """
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError, jwk
-from jose.utils import base64url_decode
-import httpx
 import json
 from typing import Optional
 
-from config.settings import settings
+import httpx
 from config.database import get_or_create_user
+from config.settings import settings
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwk, jwt
+from jose.utils import base64url_decode
 
 # HTTP Bearer token scheme
 security = HTTPBearer()
@@ -45,7 +45,7 @@ async def get_supabase_jwks() -> dict:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch JWKS: {str(e)}"
+            detail=f"Failed to fetch JWKS: {str(e)}",
         )
 
 
@@ -100,8 +100,8 @@ async def decode_token(token: str) -> dict:
             options={
                 "verify_signature": True,
                 "verify_exp": True,
-                "verify_aud": False  # Supabase tokens may not have aud claim
-            }
+                "verify_aud": False,  # Supabase tokens may not have aud claim
+            },
         )
         return payload
 
@@ -120,7 +120,7 @@ async def decode_token(token: str) -> dict:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict:
     """
     Dependency to get the current authenticated user
@@ -162,13 +162,11 @@ async def get_current_user(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching user: {str(e)}"
+            detail=f"Error fetching user: {str(e)}",
         )
 
 
-async def get_current_user_id(
-    user: dict = Depends(get_current_user)
-) -> str:
+async def get_current_user_id(user: dict = Depends(get_current_user)) -> str:
     """
     Dependency to get just the current user's ID
 
