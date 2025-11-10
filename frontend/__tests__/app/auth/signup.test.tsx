@@ -26,9 +26,9 @@ describe('SignupPage', () => {
     render(<SignupPage />)
 
     expect(screen.getByText('Create your account')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Email address')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/Password \(min 6 characters\)/i)).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Confirm password')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Enter your email')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Minimum 6 characters')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Re-enter your password')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /sign up/i })).toBeInTheDocument()
   })
 
@@ -45,9 +45,9 @@ describe('SignupPage', () => {
 
     render(<SignupPage />)
 
-    const emailInput = screen.getByPlaceholderText('Email address')
-    const passwordInput = screen.getByPlaceholderText(/Password \(min 6 characters\)/i)
-    const confirmPasswordInput = screen.getByPlaceholderText('Confirm password')
+    const emailInput = screen.getByPlaceholderText('Enter your email')
+    const passwordInput = screen.getByPlaceholderText('Minimum 6 characters')
+    const confirmPasswordInput = screen.getByPlaceholderText('Re-enter your password')
     const submitButton = screen.getByRole('button', { name: /sign up/i })
 
     fireEvent.change(emailInput, { target: { value: 'newuser@example.com' } })
@@ -73,9 +73,9 @@ describe('SignupPage', () => {
 
     render(<SignupPage />)
 
-    const emailInput = screen.getByPlaceholderText('Email address')
-    const passwordInput = screen.getByPlaceholderText(/Password \(min 6 characters\)/i)
-    const confirmPasswordInput = screen.getByPlaceholderText('Confirm password')
+    const emailInput = screen.getByPlaceholderText('Enter your email')
+    const passwordInput = screen.getByPlaceholderText('Minimum 6 characters')
+    const confirmPasswordInput = screen.getByPlaceholderText('Re-enter your password')
     const submitButton = screen.getByRole('button', { name: /sign up/i })
 
     fireEvent.change(emailInput, { target: { value: 'newuser@example.com' } })
@@ -92,9 +92,9 @@ describe('SignupPage', () => {
   it('validates password match', async () => {
     render(<SignupPage />)
 
-    const emailInput = screen.getByPlaceholderText('Email address')
-    const passwordInput = screen.getByPlaceholderText(/Password \(min 6 characters\)/i)
-    const confirmPasswordInput = screen.getByPlaceholderText('Confirm password')
+    const emailInput = screen.getByPlaceholderText('Enter your email')
+    const passwordInput = screen.getByPlaceholderText('Minimum 6 characters')
+    const confirmPasswordInput = screen.getByPlaceholderText('Re-enter your password')
     const submitButton = screen.getByRole('button', { name: /sign up/i })
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
@@ -110,9 +110,9 @@ describe('SignupPage', () => {
   it('validates password length', async () => {
     render(<SignupPage />)
 
-    const emailInput = screen.getByPlaceholderText('Email address')
-    const passwordInput = screen.getByPlaceholderText(/Password \(min 6 characters\)/i)
-    const confirmPasswordInput = screen.getByPlaceholderText('Confirm password')
+    const emailInput = screen.getByPlaceholderText('Enter your email')
+    const passwordInput = screen.getByPlaceholderText('Minimum 6 characters')
+    const confirmPasswordInput = screen.getByPlaceholderText('Re-enter your password')
     const submitButton = screen.getByRole('button', { name: /sign up/i })
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
@@ -133,9 +133,9 @@ describe('SignupPage', () => {
 
     render(<SignupPage />)
 
-    const emailInput = screen.getByPlaceholderText('Email address')
-    const passwordInput = screen.getByPlaceholderText(/Password \(min 6 characters\)/i)
-    const confirmPasswordInput = screen.getByPlaceholderText('Confirm password')
+    const emailInput = screen.getByPlaceholderText('Enter your email')
+    const passwordInput = screen.getByPlaceholderText('Minimum 6 characters')
+    const confirmPasswordInput = screen.getByPlaceholderText('Re-enter your password')
     const submitButton = screen.getByRole('button', { name: /sign up/i })
 
     fireEvent.change(emailInput, { target: { value: 'existing@example.com' } })

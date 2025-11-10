@@ -43,7 +43,7 @@ describe('DashboardPage', () => {
 
     expect(screen.getByText('Learning Mode')).toBeInTheDocument()
     expect(screen.getByText('Active')).toBeInTheDocument()
-    expect(screen.getByText('Enabled')).toBeInTheDocument()
+    expect(screen.getByText('Personalized AI-powered learning')).toBeInTheDocument()
   })
 
   it('renders topic input field', () => {
@@ -70,11 +70,11 @@ describe('DashboardPage', () => {
     const intermediateButton = screen.getByRole('button', { name: 'Intermediate' })
 
     // Default is beginner (should have active classes)
-    expect(beginnerButton).toHaveClass('border-primary-600')
+    expect(beginnerButton).toHaveClass('border-primary-500')
 
     // Click intermediate
     fireEvent.click(intermediateButton)
-    expect(intermediateButton).toHaveClass('border-primary-600')
+    expect(intermediateButton).toHaveClass('border-primary-500')
   })
 
   it('handles successful module generation', async () => {

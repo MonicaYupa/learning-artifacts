@@ -25,9 +25,9 @@ describe('LoginPage', () => {
   it('renders login form', () => {
     render(<LoginPage />)
 
-    expect(screen.getByText('Sign in to your account')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Email address')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Password')).toBeInTheDocument()
+    expect(screen.getByText('Welcome back')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Enter your email')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 
@@ -44,8 +44,8 @@ describe('LoginPage', () => {
 
     render(<LoginPage />)
 
-    const emailInput = screen.getByPlaceholderText('Email address')
-    const passwordInput = screen.getByPlaceholderText('Password')
+    const emailInput = screen.getByPlaceholderText('Enter your email')
+    const passwordInput = screen.getByPlaceholderText('Enter your password')
     const submitButton = screen.getByRole('button', { name: /sign in/i })
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
@@ -70,8 +70,8 @@ describe('LoginPage', () => {
 
     render(<LoginPage />)
 
-    const emailInput = screen.getByPlaceholderText('Email address')
-    const passwordInput = screen.getByPlaceholderText('Password')
+    const emailInput = screen.getByPlaceholderText('Enter your email')
+    const passwordInput = screen.getByPlaceholderText('Enter your password')
     const submitButton = screen.getByRole('button', { name: /sign in/i })
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
@@ -90,8 +90,8 @@ describe('LoginPage', () => {
 
     render(<LoginPage />)
 
-    const emailInput = screen.getByPlaceholderText('Email address')
-    const passwordInput = screen.getByPlaceholderText('Password')
+    const emailInput = screen.getByPlaceholderText('Enter your email')
+    const passwordInput = screen.getByPlaceholderText('Enter your password')
     const submitButton = screen.getByRole('button', { name: /sign in/i })
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
@@ -107,8 +107,8 @@ describe('LoginPage', () => {
   it('validates required fields', () => {
     render(<LoginPage />)
 
-    const emailInput = screen.getByPlaceholderText('Email address')
-    const passwordInput = screen.getByPlaceholderText('Password')
+    const emailInput = screen.getByPlaceholderText('Enter your email')
+    const passwordInput = screen.getByPlaceholderText('Enter your password')
 
     expect(emailInput).toBeRequired()
     expect(passwordInput).toBeRequired()

@@ -69,15 +69,20 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-cream-100">
         {/* Header */}
-        <header className="bg-white shadow-sm">
-          <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <header className="border-b border-cream-300 bg-white/80 backdrop-blur-sm">
+          <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-900">Learning Artifacts</h1>
+              <div className="flex items-center space-x-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-500">
+                  <div className="text-xl font-bold text-white">C</div>
+                </div>
+                <h1 className="text-xl font-semibold text-gray-900">Learning Artifacts</h1>
+              </div>
               <button
                 onClick={handleSignOut}
-                className="rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300"
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
               >
                 Sign Out
               </button>
@@ -87,12 +92,17 @@ export default function DashboardPage() {
 
         {/* Main Content */}
         <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="rounded-lg bg-white p-8 shadow-lg">
+          <div className="rounded-2xl bg-white p-8 shadow-lg shadow-primary-100/50 md:p-10">
             {/* Learning Mode Indicator */}
-            <div className="mb-6 flex items-center justify-between rounded-md bg-primary-50 p-4">
+            <div className="mb-8 flex items-center justify-between rounded-xl bg-gradient-to-r from-primary-50 to-primary-100/50 p-5">
               <div className="flex items-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white">
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-500 shadow-sm">
+                  <svg
+                    className="h-7 w-7 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -101,23 +111,23 @@ export default function DashboardPage() {
                     />
                   </svg>
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-primary-900">Learning Mode</p>
-                  <p className="text-xs text-primary-700">Active</p>
+                <div className="ml-4">
+                  <p className="text-sm font-semibold text-primary-900">Learning Mode</p>
+                  <p className="text-xs text-primary-700">Personalized AI-powered learning</p>
                 </div>
               </div>
-              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
-                Enabled
+              <span className="rounded-full bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-700">
+                Active
               </span>
             </div>
 
-            <h2 className="mb-6 text-center text-3xl font-bold text-gray-900">
+            <h2 className="mb-8 text-center text-3xl font-semibold text-gray-900">
               What would you like to learn today?
             </h2>
 
             <form onSubmit={handleGenerateModule} className="space-y-6">
               {error && (
-                <div className="rounded-md bg-red-50 p-4">
+                <div className="rounded-lg bg-red-50 p-4">
                   <div className="text-sm text-red-700">{error}</div>
                 </div>
               )}
@@ -134,11 +144,9 @@ export default function DashboardPage() {
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   placeholder="e.g., Python basics, Machine Learning, Web Development"
-                  className="mt-1 block w-full rounded-md border-gray-300 px-4 py-3 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ring-1 ring-gray-300"
+                  className="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 sm:text-sm"
                 />
-                <p className="mt-2 text-xs text-gray-500">
-                  Enter any topic you want to learn about
-                </p>
+                <p className="mt-2 text-xs text-gray-500">Enter any topic you'd like to explore</p>
               </div>
 
               {/* Skill Level Selector */}
@@ -150,10 +158,10 @@ export default function DashboardPage() {
                       key={level}
                       type="button"
                       onClick={() => setSkillLevel(level)}
-                      className={`rounded-md border-2 px-4 py-3 text-sm font-medium transition-colors ${
+                      className={`rounded-lg border-2 px-4 py-3.5 text-sm font-semibold transition-all ${
                         skillLevel === level
-                          ? 'border-primary-600 bg-primary-50 text-primary-700'
-                          : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                          ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-sm'
+                          : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50'
                       }`}
                     >
                       {level.charAt(0).toUpperCase() + level.slice(1)}
@@ -166,7 +174,7 @@ export default function DashboardPage() {
               <button
                 type="submit"
                 disabled={loading || !topic}
-                className="w-full rounded-md bg-primary-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-8 w-full rounded-lg bg-primary-500 px-4 py-3.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-primary-600 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
               >
                 {loading ? (
                   <span className="flex items-center justify-center">
@@ -198,6 +206,11 @@ export default function DashboardPage() {
               </button>
             </form>
           </div>
+
+          {/* Footer branding */}
+          <p className="mt-6 text-center text-xs text-gray-500">
+            Powered by Claude • AI-personalized learning
+          </p>
         </main>
       </div>
     </ProtectedRoute>
