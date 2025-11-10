@@ -4,11 +4,31 @@ Handles PostgreSQL connections to Supabase database
 """
 
 from contextlib import contextmanager
-from typing import Optional
+from typing import Any, Dict, List, Optional, Union
+from uuid import UUID
 
 import psycopg
 from config.settings import settings
 from psycopg.rows import dict_row
+
+
+def convert_uuids_to_strings(data: Any) -> Any:
+    """
+    Recursively convert UUID objects to strings in data structures
+
+    Args:
+        data: Data that may contain UUID objects
+
+    Returns:
+        Data with UUIDs converted to strings
+    """
+    if isinstance(data, UUID):
+        return str(data)
+    elif isinstance(data, dict):
+        return {key: convert_uuids_to_strings(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [convert_uuids_to_strings(item) for item in data]
+    return data
 
 
 @contextmanager
@@ -49,7 +69,7 @@ def execute_query(query: str, params: Optional[tuple] = None, fetch_one: bool = 
         fetch_one: If True, fetch only one result; otherwise fetch all
 
     Returns:
-        Query results as dictionary or list of dictionaries
+        Query results as dictionary or list of dictionaries (with UUIDs converted to strings)
     """
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
@@ -60,15 +80,13 @@ def execute_query(query: str, params: Optional[tuple] = None, fetch_one: bool = 
                 query.strip().upper().startswith(("INSERT", "UPDATE", "DELETE"))
                 and "RETURNING" in query.upper()
             ):
-                if fetch_one:
-                    return cursor.fetchone()
-                return cursor.fetchall()
+                result = cursor.fetchone() if fetch_one else cursor.fetchall()
+                return convert_uuids_to_strings(result)
 
             # For SELECT queries
             if query.strip().upper().startswith("SELECT"):
-                if fetch_one:
-                    return cursor.fetchone()
-                return cursor.fetchall()
+                result = cursor.fetchone() if fetch_one else cursor.fetchall()
+                return convert_uuids_to_strings(result)
 
             # For other queries (CREATE, DROP, etc.)
             return None

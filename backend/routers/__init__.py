@@ -2,6 +2,6 @@
 Routers package
 """
 
-from . import health
+from . import health, modules
 
-__all__ = ["health"]
+__all__ = ["health", "modules"]

@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     # Claude API Configuration
     ANTHROPIC_API_KEY: str
+    USE_MOCK_CLAUDE: bool = False  # Set to True to use mock data instead of Claude API
 
     # CORS Configuration
     CORS_ORIGINS: Union[List[str], str] = [

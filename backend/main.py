@@ -9,7 +9,7 @@ from config.database import test_db_connection
 from config.settings import settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import health
+from routers import health, modules
 
 
 # Lifespan context manager for startup/shutdown events
@@ -53,6 +53,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health.router, tags=["health"])
+app.include_router(modules.router, prefix=settings.API_PREFIX, tags=["modules"])
 
 
 # Root endpoint
