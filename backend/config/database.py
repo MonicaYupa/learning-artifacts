@@ -3,8 +3,8 @@ Database Connection Utility
 Handles PostgreSQL connections to Supabase database
 """
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import psycopg
+from psycopg.rows import dict_row
 from contextlib import contextmanager
 from typing import Optional
 
@@ -25,9 +25,9 @@ def get_db_connection():
     """
     conn = None
     try:
-        conn = psycopg2.connect(
+        conn = psycopg.connect(
             settings.DATABASE_URL,
-            cursor_factory=RealDictCursor  # Return rows as dictionaries
+            row_factory=dict_row  # Return rows as dictionaries
         )
         yield conn
         conn.commit()
