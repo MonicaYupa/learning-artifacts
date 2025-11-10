@@ -1,8 +1,9 @@
 """
 Mock Data Generator
-Provides realistic mock module data for testing without Claude API calls
+Provides realistic mock module data and answer evaluation for testing without Claude API calls
 """
 
+import random
 from typing import Dict
 
 
@@ -409,3 +410,75 @@ Buy Option (Leading vendor):
     module_data["skill_level"] = skill_level
 
     return module_data
+
+
+def evaluate_mock_answer(exercise: Dict, answer_text: str, hints_used: int) -> Dict:
+    """
+    Generate a mock evaluation for testing without Claude API
+
+    Args:
+        exercise: The exercise dictionary
+        answer_text: The student's answer
+        hints_used: Number of hints used (0-3)
+
+    Returns:
+        Dictionary with assessment, internal_score, feedback, and should_advance
+    """
+
+    # Simple heuristic evaluation based on answer length and keywords
+    answer_lower = answer_text.lower()
+    answer_length = len(answer_text.split())
+
+    # Check for key concepts in validation criteria
+    criteria_keywords = []
+    for criterion, description in exercise.get("validation_criteria", {}).items():
+        # Extract keywords from criterion descriptions
+        criteria_keywords.extend(description.lower().split())
+
+    # Count how many criteria-related words are in the answer
+    keyword_matches = sum(1 for word in criteria_keywords if word in answer_lower)
+
+    # Scoring logic
+    # Base score on answer length (longer answers tend to be more detailed)
+    length_score = min(40, answer_length * 2)  # Up to 40 points for length
+
+    # Add points for keyword matches
+    keyword_score = min(40, keyword_matches * 3)  # Up to 40 points for keywords
+
+    # Deduct points for hints used (slight penalty)
+    hint_penalty = hints_used * 5  # 5 points per hint
+
+    # Calculate total score
+    total_score = max(0, min(100, length_score + keyword_score - hint_penalty))
+
+    # Determine assessment based on score
+    if total_score >= 80:
+        assessment = "strong"
+        should_advance = True
+        feedback = "Excellent work! Your answer demonstrates strong understanding of the key concepts. You've identified the main points and provided clear reasoning. This shows you're ready to move forward."
+    elif total_score >= 50:
+        assessment = "developing"
+        should_advance = False
+        feedback = "Good start! Your answer shows emerging understanding, but could be strengthened. Consider elaborating on the key validation criteria and providing more specific examples or justification for your conclusions."
+    else:
+        assessment = "needs_support"
+        should_advance = False
+        feedback = "Your answer needs more development. Review the exercise prompt and validation criteria carefully. Consider using the hints to guide your thinking, and try to address each of the key concepts more thoroughly."
+
+    # Add some randomness to make it more realistic (±10 points)
+    score_variance = random.randint(-10, 10)
+    final_score = max(0, min(100, total_score + score_variance))
+
+    # Adjust assessment if score changed significantly
+    if final_score >= 80 and assessment != "strong":
+        assessment = "strong"
+        should_advance = True
+    elif final_score < 50 and assessment == "developing":
+        assessment = "needs_support"
+
+    return {
+        "assessment": assessment,
+        "internal_score": final_score,
+        "feedback": feedback,
+        "should_advance": should_advance,
+    }

@@ -8,7 +8,7 @@ from typing import Dict, List
 
 from anthropic import Anthropic
 from config.settings import settings
-from services.mock_data import generate_mock_module
+from services.mock_data import evaluate_mock_answer, generate_mock_module
 
 # Initialize Anthropic client
 client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
@@ -194,6 +194,10 @@ def evaluate_answer(exercise: Dict, answer_text: str, hints_used: int) -> Dict:
     Raises:
         Exception: If evaluation fails
     """
+
+    # Use mock evaluation if configured (for testing without API credits)
+    if settings.USE_MOCK_CLAUDE:
+        return evaluate_mock_answer(exercise, answer_text, hints_used)
 
     system_prompt = """You are an expert learning instructor evaluating student responses.
 
