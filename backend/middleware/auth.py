@@ -1,12 +1,15 @@
 """
 JWT Authentication Middleware
-Verifies Supabase JWT tokens and extracts user information
+Verifies Supabase JWT tokens using JWT signing keys (RS256)
 """
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+from jose import jwt, JWTError, jwk
+from jose.utils import base64url_decode
 import httpx
+import json
+from typing import Optional
 
 from config.settings import settings
 from config.database import get_or_create_user
@@ -14,20 +17,41 @@ from config.database import get_or_create_user
 # HTTP Bearer token scheme
 security = HTTPBearer()
 
-
-async def get_supabase_jwt_secret():
-    """
-    Fetch Supabase JWT secret from the JWKS endpoint
-    In production, cache this value to avoid repeated requests
-    """
-    # For Supabase, we can use the JWT_SECRET from settings
-    # which is derived from the Supabase project's JWT secret
-    return settings.JWT_SECRET
+# Cache for JWKS (JSON Web Key Set)
+_jwks_cache: Optional[dict] = None
 
 
-def decode_token(token: str) -> dict:
+async def get_supabase_jwks() -> dict:
     """
-    Decode and verify JWT token
+    Fetch Supabase JWKS (JSON Web Key Set) from the well-known endpoint
+    Caches the result to avoid repeated requests
+
+    Returns:
+        JWKS dictionary containing public keys
+    """
+    global _jwks_cache
+
+    if _jwks_cache is not None:
+        return _jwks_cache
+
+    jwks_url = f"{settings.SUPABASE_URL}/.well-known/jwks.json"
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(jwks_url, timeout=10.0)
+            response.raise_for_status()
+            _jwks_cache = response.json()
+            return _jwks_cache
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch JWKS: {str(e)}"
+        )
+
+
+async def decode_token(token: str) -> dict:
+    """
+    Decode and verify JWT token using Supabase's public key from JWKS
 
     Args:
         token: JWT token string
@@ -39,10 +63,39 @@ def decode_token(token: str) -> dict:
         HTTPException: If token is invalid or expired
     """
     try:
-        # Decode the JWT token
+        # Get the unverified header to find the key ID (kid)
+        unverified_header = jwt.get_unverified_header(token)
+
+        # Fetch JWKS from Supabase
+        jwks = await get_supabase_jwks()
+
+        # Find the key with matching kid
+        kid = unverified_header.get("kid")
+        if not kid:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token missing 'kid' in header",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Find the matching key in JWKS
+        key = None
+        for jwk_key in jwks.get("keys", []):
+            if jwk_key.get("kid") == kid:
+                key = jwk_key
+                break
+
+        if not key:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="No matching key found in JWKS",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Decode and verify the token using the public key
         payload = jwt.decode(
             token,
-            settings.JWT_SECRET,
+            key,
             algorithms=[settings.JWT_ALGORITHM],
             options={
                 "verify_signature": True,
@@ -56,6 +109,12 @@ def decode_token(token: str) -> dict:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid authentication credentials: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token verification failed: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -77,8 +136,8 @@ async def get_current_user(
     """
     token = credentials.credentials
 
-    # Decode and verify token
-    payload = decode_token(token)
+    # Decode and verify token using JWKS
+    payload = await decode_token(token)
 
     # Extract user email from token
     email = payload.get("email")

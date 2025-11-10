@@ -21,9 +21,8 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str
     DATABASE_URL: str
 
-    # JWT Configuration
-    JWT_SECRET: str
-    JWT_ALGORITHM: str = "HS256"
+    # JWT Configuration (using JWT signing keys)
+    JWT_ALGORITHM: str = "RS256"  # Supabase now uses RS256 with signing keys
 
     # Claude API Configuration
     ANTHROPIC_API_KEY: str

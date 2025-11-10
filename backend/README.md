@@ -43,8 +43,9 @@ Required environment variables:
 - `SUPABASE_ANON_KEY` - Supabase anonymous/public key
 - `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (keep secret!)
 - `DATABASE_URL` - PostgreSQL connection string from Supabase
-- `JWT_SECRET` - JWT secret from Supabase
 - `ANTHROPIC_API_KEY` - Your Claude API key
+
+**Note:** JWT secret is no longer required. The backend automatically fetches public keys from Supabase's JWKS endpoint for JWT verification using RS256 algorithm.
 
 ### 4. Set Up Database
 
@@ -172,9 +173,10 @@ async def protected_endpoint(user: dict = Depends(get_current_user)):
 
 ### JWT Verification Issues
 
-1. Verify `JWT_SECRET` matches Supabase project settings
+1. Verify JWKS endpoint is accessible: `{SUPABASE_URL}/.well-known/jwks.json`
 2. Check token is not expired
 3. Ensure token is sent in `Authorization: Bearer <token>` header
+4. Verify JWT signing keys are enabled in Supabase (Settings → API → JWT Settings)
 
 ### Module Generation Issues
 
