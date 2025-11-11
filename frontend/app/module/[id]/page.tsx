@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import HintSystem from '@/components/HintSystem'
+import FeedbackDisplay from '@/components/FeedbackDisplay'
+import AnswerSubmission from '@/components/AnswerSubmission'
+import type { HintResponse, SubmitResponse } from '@/types/session'
 
 interface Exercise {
   id: string
@@ -25,14 +29,30 @@ interface Module {
   exercises?: Exercise[]
 }
 
+interface ChatMessage {
+  id: string
+  type: 'hint' | 'feedback'
+  content: string
+  timestamp: Date
+  assessment?: 'strong' | 'developing' | 'needs_support'
+  attemptNumber?: number
+  modelAnswer?: string
+}
+
+const MAX_ATTEMPTS = 3
+
 export default function ModulePage() {
   const [module, setModule] = useState<Module | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
-  const [answer, setAnswer] = useState('')
-  const [showHints, setShowHints] = useState(false)
+  const [currentAttemptNumber, setCurrentAttemptNumber] = useState(1)
+  const [hintsUsed, setHintsUsed] = useState(0)
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [sessionId] = useState(`session-${Date.now()}`) // TODO: Get from backend
+  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false)
   const [activeTab, setActiveTab] = useState<'exercise' | 'editor'>('exercise')
+
   const router = useRouter()
   const params = useParams()
   const supabase = createClient()
@@ -40,6 +60,14 @@ export default function ModulePage() {
   useEffect(() => {
     const fetchModule = async () => {
       try {
+        // Demo mode - load sample exercises
+        if (params.id === 'demo') {
+          const { getMockModule } = await import('@/lib/mock-data/exercises')
+          setModule(getMockModule())
+          setLoading(false)
+          return
+        }
+
         const {
           data: { session },
         } = await supabase.auth.getSession()
@@ -73,6 +101,89 @@ export default function ModulePage() {
 
     fetchModule()
   }, [params.id, router, supabase])
+
+  const currentExercise = module?.exercises?.[currentExerciseIndex]
+  const totalExercises = module?.exercises?.length || 0
+  const maxHints = currentExercise?.hints?.length || 3
+
+  // Handle hint received
+  const handleHintReceived = useCallback((response: HintResponse) => {
+    const newMessage: ChatMessage = {
+      id: `hint-${Date.now()}`,
+      type: 'hint',
+      content: response.hint,
+      timestamp: new Date(),
+    }
+
+    setChatMessages((prev) => [...prev, newMessage])
+    setHintsUsed(response.hint_level)
+
+    // Switch to exercise tab on mobile to show hint
+    if (window.innerWidth < 640) {
+      setActiveTab('exercise')
+    }
+  }, [])
+
+  // Handle submission success
+  const handleSubmitSuccess = useCallback(
+    (response: SubmitResponse) => {
+      const newMessage: ChatMessage = {
+        id: `feedback-${Date.now()}`,
+        type: 'feedback',
+        content: response.feedback,
+        timestamp: new Date(),
+        assessment: response.assessment,
+        attemptNumber: currentAttemptNumber,
+        modelAnswer: response.model_answer,
+      }
+
+      setChatMessages((prev) => [...prev, newMessage])
+
+      // Auto-advance logic
+      if (response.should_advance) {
+        if (response.assessment === 'strong') {
+          // Auto-advance after showing success message
+          setIsAutoAdvancing(true)
+          setTimeout(() => {
+            advanceToNextExercise()
+          }, 2000)
+        } else if (response.show_model_answer) {
+          // After 3 attempts, show model answer and advance
+          setIsAutoAdvancing(true)
+          setTimeout(() => {
+            advanceToNextExercise()
+          }, 3000)
+        }
+      } else {
+        // Increment attempt number for retry
+        setCurrentAttemptNumber((prev) => prev + 1)
+
+        // Switch to exercise tab on mobile to show feedback
+        if (window.innerWidth < 640) {
+          setActiveTab('exercise')
+        }
+      }
+    },
+    [currentAttemptNumber]
+  )
+
+  const advanceToNextExercise = () => {
+    if (currentExerciseIndex < totalExercises - 1) {
+      // Move to next exercise
+      setCurrentExerciseIndex((prev) => prev + 1)
+      resetExerciseState()
+    } else {
+      // Module complete
+      router.push('/module')
+    }
+  }
+
+  const resetExerciseState = () => {
+    setCurrentAttemptNumber(1)
+    setHintsUsed(0)
+    setChatMessages([])
+    setIsAutoAdvancing(false)
+  }
 
   const renderExercise = (exercise: Exercise) => {
     return (
@@ -147,43 +258,6 @@ export default function ModulePage() {
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* Hints Section */}
-        {showHints && exercise.hints && exercise.hints.length > 0 && (
-          <div
-            className="rounded-lg border border-primary-300 bg-primary-50/50 p-4"
-            role="region"
-            aria-label="Exercise hints"
-            aria-live="polite"
-          >
-            <div className="mb-3 flex items-center gap-2">
-              <svg
-                className="h-5 w-5 text-primary-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                />
-              </svg>
-              <h4 className="text-sm font-semibold text-primary-900">Hints</h4>
-            </div>
-            <ul className="space-y-2">
-              {exercise.hints.map((hint, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm text-primary-800">
-                  <span className="mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary-200 text-xs font-semibold text-primary-700">
-                    {idx + 1}
-                  </span>
-                  <span className="leading-relaxed">{hint}</span>
-                </li>
-              ))}
-            </ul>
           </div>
         )}
       </div>
@@ -304,7 +378,7 @@ export default function ModulePage() {
             className={`flex w-full flex-col overflow-y-auto border-r border-cream-300 bg-white sm:w-2/5 ${activeTab === 'exercise' ? 'block' : 'hidden sm:flex'}`}
           >
             <div className="flex-1 p-4 sm:p-8">
-              {module && (
+              {module && currentExercise && (
                 <div className="space-y-6">
                   {/* Module Header */}
                   <div className="border-b border-cream-200 pb-4 sm:pb-5">
@@ -320,44 +394,89 @@ export default function ModulePage() {
                           {module.domain}
                         </span>
                       )}
+                      {currentAttemptNumber > 1 && (
+                        <span className="rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-800 sm:px-3">
+                          Attempt {currentAttemptNumber}/{MAX_ATTEMPTS}
+                        </span>
+                      )}
                     </div>
                   </div>
 
                   {/* Current Exercise */}
-                  {module.exercises && module.exercises.length > 0 && (
-                    <div className="space-y-4">
-                      {renderExercise(module.exercises[currentExerciseIndex])}
+                  <div className="space-y-4">{renderExercise(currentExercise)}</div>
+
+                  {/* Chat Messages (Hints & Feedback) */}
+                  {chatMessages.length > 0 && (
+                    <div className="space-y-4 border-t border-cream-200 pt-6">
+                      <h3 className="text-sm font-semibold text-gray-700">Chat History</h3>
+                      {chatMessages.map((message) => (
+                        <div key={message.id}>
+                          {message.type === 'hint' ? (
+                            <div
+                              className="rounded-lg border border-primary-300 bg-primary-50/50 p-4"
+                              role="region"
+                              aria-label="Hint message"
+                            >
+                              <div className="mb-2 flex items-center gap-2">
+                                <svg
+                                  className="h-5 w-5 text-primary-600"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                                  />
+                                </svg>
+                                <span className="text-xs font-semibold text-primary-900">Hint</span>
+                              </div>
+                              <p className="text-sm leading-relaxed text-primary-800">
+                                {message.content}
+                              </p>
+                            </div>
+                          ) : (
+                            <FeedbackDisplay
+                              assessment={message.assessment!}
+                              feedback={message.content}
+                              attemptNumber={message.attemptNumber!}
+                              modelAnswer={message.modelAnswer}
+                            />
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
 
-                  {!module.exercises ||
-                    (module.exercises.length === 0 && (
-                      <div className="rounded-xl border-2 border-dashed border-primary-200 bg-primary-50/30 p-6">
-                        <div className="flex items-start space-x-3">
-                          <svg
-                            className="h-6 w-6 flex-shrink-0 text-primary-500"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                          <div>
-                            <p className="text-sm font-medium text-primary-900">
-                              Loading exercises...
-                            </p>
-                            <p className="mt-1 text-sm text-primary-700">
-                              Your personalized exercises will appear here shortly.
-                            </p>
-                          </div>
+                  {!currentExercise && (
+                    <div className="rounded-xl border-2 border-dashed border-primary-200 bg-primary-50/30 p-6">
+                      <div className="flex items-start space-x-3">
+                        <svg
+                          className="h-6 w-6 flex-shrink-0 text-primary-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-medium text-primary-900">
+                            Loading exercises...
+                          </p>
+                          <p className="mt-1 text-sm text-primary-700">
+                            Your personalized exercises will appear here shortly.
+                          </p>
                         </div>
                       </div>
-                    ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -371,47 +490,39 @@ export default function ModulePage() {
             className={`flex w-full flex-col bg-cream-50 sm:w-3/5 ${activeTab === 'editor' ? 'block' : 'hidden sm:flex'}`}
           >
             <div className="flex h-full flex-col p-4 sm:p-8">
-              {/* Editor Area */}
+              {/* Answer Submission */}
               <div className="mb-3 flex-1 sm:mb-4">
-                <label htmlFor="answer" className="mb-2 block text-sm font-medium text-gray-700">
-                  Your Response
-                </label>
-                <textarea
-                  id="answer"
-                  value={answer}
-                  onChange={(e) => setAnswer(e.target.value)}
-                  className="h-[calc(100%-28px)] w-full resize-none rounded-lg border border-gray-300 bg-white p-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 sm:p-4"
-                  placeholder="Type your answer here..."
+                <AnswerSubmission
+                  sessionId={sessionId}
+                  hintsUsed={hintsUsed}
+                  onSubmitSuccess={handleSubmitSuccess}
                 />
               </div>
 
-              {/* Character Count */}
-              <div className="mb-3 flex items-center justify-between text-xs text-gray-500 sm:mb-4">
-                <span>
-                  {answer.length} characters • {answer.trim().split(/\s+/).filter(Boolean).length}{' '}
-                  words
-                </span>
+              {/* Hint System */}
+              <div className="mb-3 sm:mb-4">
+                <HintSystem
+                  sessionId={sessionId}
+                  currentHintLevel={hintsUsed}
+                  maxHints={maxHints}
+                  onHintReceived={handleHintReceived}
+                />
               </div>
 
-              {/* Action Buttons */}
-              <div className="mb-3 flex flex-col gap-2.5 sm:mb-4 sm:flex-row sm:gap-3">
-                <button
-                  onClick={() => setShowHints(!showHints)}
-                  className="flex-1 rounded-lg border-2 border-primary-500 bg-white px-4 py-2.5 text-sm font-semibold text-primary-500 transition-all hover:bg-primary-50 active:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 sm:py-3"
+              {/* Auto-advance notification */}
+              {isAutoAdvancing && (
+                <div
+                  className="mb-3 rounded-lg border border-green-300 bg-green-50 p-3 text-center sm:mb-4"
+                  role="status"
+                  aria-live="polite"
                 >
-                  {showHints ? 'Hide Hints' : 'Request Hint'}
-                </button>
-                <button
-                  onClick={() => {
-                    // Submit logic will be added in later phases
-                    console.log('Submitting answer:', answer)
-                  }}
-                  disabled={!answer.trim()}
-                  className="flex-1 rounded-lg bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-600 hover:shadow-md active:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:py-3"
-                >
-                  Submit Answer
-                </button>
-              </div>
+                  <p className="text-sm text-green-800">
+                    {currentExerciseIndex < totalExercises - 1
+                      ? 'Great job! Moving to next exercise...'
+                      : 'Module complete! Returning to dashboard...'}
+                  </p>
+                </div>
+              )}
 
               {/* Progress Tracker */}
               {module?.exercises && module.exercises.length > 0 && (
