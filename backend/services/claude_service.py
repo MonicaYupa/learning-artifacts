@@ -142,6 +142,7 @@ Return ONLY valid JSON matching this exact schema - no markdown, no code blocks,
   "exercises": [
     {
       "sequence": 1,
+      "name": "string (short descriptive name, 2-5 words)",
       "type": "analysis",
       "prompt": "string (clear task description)",
       "material": "string (content to analyze, required for analysis/framework)",
@@ -157,6 +158,7 @@ Return ONLY valid JSON matching this exact schema - no markdown, no code blocks,
     },
     {
       "sequence": 2,
+      "name": "string (short descriptive name, 2-5 words)",
       "type": "comparative",
       "prompt": "string (ranking task)",
       "options": ["option1", "option2", "option3"],
@@ -171,6 +173,7 @@ Return ONLY valid JSON matching this exact schema - no markdown, no code blocks,
     },
     {
       "sequence": 3,
+      "name": "string (short descriptive name, 2-5 words)",
       "type": "framework",
       "prompt": "string (framework application task)",
       "material": "string (scenario to analyze)",
@@ -199,11 +202,12 @@ Exercise 2 (Comparative): Give 3-4 options, ask user to rank and justify
 Exercise 3 (Framework): Provide structure, ask user to apply to scenario
 
 For each exercise include:
-1. Clear prompt with scenario/context
-2. Any material needed (customer feedback, data, examples)
-3. Exactly 3 progressive hints (conceptual → specific → near-solution)
-4. Validation criteria object with at least 2-4 criteria
-5. Model answer with explanation of why it's strong
+1. A short descriptive name (2-5 words, e.g., "Analyzing Market Trends" or "Framework Application")
+2. Clear prompt with scenario/context
+3. Any material needed (customer feedback, data, examples)
+4. Exactly 3 progressive hints (conceptual → specific → near-solution)
+5. Validation criteria object with at least 2-4 criteria
+6. Model answer with explanation of why it's strong
 
 Ensure the topic is appropriate for {skill_level} level and exercises build on each other.
 
