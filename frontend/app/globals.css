@@ -8,12 +8,32 @@
   --breakpoint-md: 48rem; /* 768px */
   --breakpoint-lg: 64rem; /* 1024px */
   --breakpoint-xl: 80rem; /* 1280px */
+
+  /* Anthropic brand colors - Primary palette */
+  --color-primary-50: #fef6f3;
+  --color-primary-100: #fde9e1;
+  --color-primary-200: #fbd2c3;
+  --color-primary-300: #f7b099;
+  --color-primary-400: #f1875e;
+  --color-primary-500: #d97757; /* Anthropic Orange */
+  --color-primary-600: #cc785c;
+  --color-primary-700: #b86547;
+  --color-primary-800: #9a503a;
+  --color-primary-900: #7d4332;
+
+  /* Warm neutrals - Cream palette */
+  --color-cream-50: #fdfcfb;
+  --color-cream-100: #faf8f5;
+  --color-cream-200: #f5f1eb;
+  --color-cream-300: #ebe5db;
+  --color-cream-400: #e8e6dc; /* Anthropic Light Gray */
+  --color-cream-500: #d9cfbd;
+  --color-cream-600: #c4b59f;
 }
 
 :root {
   --foreground-rgb: 67, 57, 44; /* Warm dark brown */
   --background: #faf8f5; /* Cream */
-  --anthropic-coral: #cc785c;
 }
 
 body {
