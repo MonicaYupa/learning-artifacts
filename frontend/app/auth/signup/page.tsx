@@ -46,7 +46,7 @@ export default function SignupPage() {
 
       if (data.session) {
         // User is automatically signed in
-        router.push('/dashboard')
+        router.push('/module')
         router.refresh()
       } else {
         // Email confirmation might be required
@@ -65,11 +65,6 @@ export default function SignupPage() {
         {/* Anthropic-styled card */}
         <div className="rounded-2xl bg-white p-8 shadow-lg shadow-primary-100/50">
           <div className="mb-8">
-            <div className="mb-6 flex justify-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary-50">
-                <div className="text-3xl font-bold text-primary-500">C</div>
-              </div>
-            </div>
             <h2 className="text-center text-3xl font-semibold tracking-tight text-gray-900">
               Create your account
             </h2>

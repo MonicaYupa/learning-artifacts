@@ -60,7 +60,7 @@ describe('SignupPage', () => {
         email: 'newuser@example.com',
         password: 'password123',
       })
-      expect(mockPush).toHaveBeenCalledWith('/dashboard')
+      expect(mockPush).toHaveBeenCalledWith('/module')
       expect(mockRefresh).toHaveBeenCalled()
     })
   })

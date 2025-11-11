@@ -14,7 +14,7 @@ from models.schemas import (
     ModuleListItem,
     ModuleResponse,
 )
-from services.claude_service import generate_module
+from services.claude_service import extract_topic_and_level, generate_module
 
 router = APIRouter()
 
@@ -129,7 +129,7 @@ async def generate_new_module(request: ModuleGenerateRequest):
     Generate a new learning module using Claude API
 
     Args:
-        request: Module generation parameters (topic, skill_level, exercise_count)
+        request: Module generation parameters (message OR topic+skill_level, exercise_count)
 
     Returns:
         Generated module with full exercise details
@@ -139,10 +139,24 @@ async def generate_new_module(request: ModuleGenerateRequest):
         500: Module generation or storage failed
     """
     try:
+        # Extract topic and skill level from message if provided
+        if request.message:
+            extracted = extract_topic_and_level(request.message)
+            topic = extracted["topic"]
+            skill_level = extracted["skill_level"]
+        elif request.topic and request.skill_level:
+            topic = request.topic
+            skill_level = request.skill_level.value
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Either 'message' or both 'topic' and 'skill_level' must be provided",
+            )
+
         # Generate module using Claude API
         module_data = generate_module(
-            topic=request.topic,
-            skill_level=request.skill_level.value,
+            topic=topic,
+            skill_level=skill_level,
             exercise_count=request.exercise_count,
         )
 

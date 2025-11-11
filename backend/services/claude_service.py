@@ -14,6 +14,79 @@ from services.mock_data import evaluate_mock_answer, generate_mock_module
 client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 
+def extract_topic_and_level(message: str) -> Dict[str, str]:
+    """
+    Extract topic and skill level from user's message using Claude API
+
+    Args:
+        message: User's message describing what they want to learn
+
+    Returns:
+        Dictionary containing topic and skill_level
+
+    Raises:
+        Exception: If extraction fails
+    """
+    system_prompt = """You are an expert at understanding learning requests.
+Extract the topic and skill level from the user's message.
+
+Rules:
+- Topic should be clear and specific (e.g., "Python basics", "Machine Learning", "Product Management")
+- Skill level must be one of: beginner, intermediate, or advanced
+- If skill level is not explicitly mentioned, infer it from context clues
+- Default to "beginner" if uncertain about skill level
+
+Return ONLY valid JSON matching this schema - no markdown, no code blocks:
+{
+  "topic": "string (the learning topic)",
+  "skill_level": "beginner|intermediate|advanced"
+}"""
+
+    user_prompt = f"""Extract the topic and skill level from this message:
+
+"{message}"
+
+Return ONLY the JSON object."""
+
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=500,
+            temperature=0.3,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+
+        # Extract the text content
+        response_text = response.content[0].text.strip()
+
+        # Remove markdown code blocks if present
+        if response_text.startswith("```"):
+            start_idx = response_text.find("{")
+            end_idx = response_text.rfind("}") + 1
+            if start_idx != -1 and end_idx > start_idx:
+                response_text = response_text[start_idx:end_idx]
+
+        # Parse the JSON response
+        extracted_data = json.loads(response_text)
+
+        # Validate required fields
+        if "topic" not in extracted_data or "skill_level" not in extracted_data:
+            raise ValueError("Missing required fields in extraction")
+
+        # Validate skill level
+        valid_levels = ["beginner", "intermediate", "advanced"]
+        if extracted_data["skill_level"] not in valid_levels:
+            raise ValueError(f"Invalid skill level: {extracted_data['skill_level']}")
+
+        return extracted_data
+
+    except json.JSONDecodeError as e:
+        raise Exception(f"Failed to parse extraction response as JSON: {str(e)}")
+    except Exception as e:
+        raise Exception(f"Topic and level extraction failed: {str(e)}")
+
+
 def generate_module(topic: str, skill_level: str, exercise_count: int = 3) -> Dict:
     """
     Generate a learning module using Claude API
