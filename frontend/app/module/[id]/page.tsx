@@ -76,9 +76,9 @@ export default function ModulePage() {
 
   const renderExercise = (exercise: Exercise) => {
     return (
-      <div className="space-y-5">
+      <div className="space-y-4 sm:space-y-5">
         {/* Exercise Prompt */}
-        <div className="rounded-lg bg-gradient-to-r from-primary-50 to-primary-100/50 p-5">
+        <div className="rounded-lg bg-gradient-to-r from-primary-50 to-primary-100/50 p-4 sm:p-5">
           <div className="mb-2 flex items-center gap-2">
             <span className="rounded-full bg-primary-500 px-2.5 py-0.5 text-xs font-semibold text-white">
               {exercise.type.charAt(0).toUpperCase() + exercise.type.slice(1)}
@@ -227,13 +227,19 @@ export default function ModulePage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-cream-100">
         <header className="border-b border-cream-300 bg-white/80 backdrop-blur-sm">
-          <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
               <button
                 onClick={() => router.push('/module')}
-                className="flex items-center space-x-2 text-primary-500 transition-colors hover:text-primary-600"
+                className="flex items-center space-x-1.5 py-2 text-primary-500 transition-colors hover:text-primary-600 active:text-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 sm:space-x-2"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -241,19 +247,21 @@ export default function ModulePage() {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                <span className="font-medium">Back to Chat</span>
+                <span className="text-sm font-medium sm:text-base">Back to Chat</span>
               </button>
               <div className="flex items-center space-x-2">
-                <h1 className="text-lg font-semibold text-gray-900">Learning Module</h1>
+                <h1 className="text-base font-semibold text-gray-900 sm:text-lg">
+                  Learning Module
+                </h1>
               </div>
-              <div className="w-32"></div>
+              <div className="w-16 sm:w-32"></div>
             </div>
           </div>
         </header>
 
         {/* Mobile Tab Navigation */}
         <nav
-          className="border-b border-cream-300 bg-white lg:hidden"
+          className="border-b border-cream-300 bg-white sm:hidden"
           aria-label="Exercise navigation"
         >
           <div className="flex" role="tablist">
@@ -287,26 +295,28 @@ export default function ModulePage() {
         </nav>
 
         {/* Split-screen layout */}
-        <main className="flex h-[calc(100vh-129px)] overflow-hidden lg:h-[calc(100vh-73px)]">
+        <main className="flex h-[calc(100vh-121px)] overflow-hidden sm:h-[calc(100vh-73px)]">
           {/* Left Panel - Chat UI (40%) */}
           <div
             id="exercise-panel"
             role="tabpanel"
             aria-labelledby="exercise-tab"
-            className={`flex w-full flex-col overflow-y-auto border-r border-cream-300 bg-white lg:w-2/5 ${activeTab === 'exercise' ? 'block' : 'hidden lg:flex'}`}
+            className={`flex w-full flex-col overflow-y-auto border-r border-cream-300 bg-white sm:w-2/5 ${activeTab === 'exercise' ? 'block' : 'hidden sm:flex'}`}
           >
-            <div className="flex-1 p-6 lg:p-8">
+            <div className="flex-1 p-4 sm:p-8">
               {module && (
                 <div className="space-y-6">
                   {/* Module Header */}
-                  <div className="border-b border-cream-200 pb-5">
-                    <h2 className="mb-2 text-2xl font-semibold text-gray-900">{module.topic}</h2>
+                  <div className="border-b border-cream-200 pb-4 sm:pb-5">
+                    <h2 className="mb-2 text-xl font-semibold text-gray-900 sm:text-2xl">
+                      {module.topic}
+                    </h2>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-primary-100 px-3 py-1 text-xs font-semibold text-primary-700">
+                      <span className="rounded-full bg-primary-100 px-2.5 py-1 text-xs font-semibold text-primary-700 sm:px-3">
                         {module.skill_level.charAt(0).toUpperCase() + module.skill_level.slice(1)}
                       </span>
                       {module.domain && (
-                        <span className="rounded-full bg-cream-200 px-3 py-1 text-xs font-semibold text-gray-700">
+                        <span className="rounded-full bg-cream-200 px-2.5 py-1 text-xs font-semibold text-gray-700 sm:px-3">
                           {module.domain}
                         </span>
                       )}
@@ -358,11 +368,11 @@ export default function ModulePage() {
             id="editor-panel"
             role="tabpanel"
             aria-labelledby="editor-tab"
-            className={`flex w-full flex-col bg-cream-50 lg:w-3/5 ${activeTab === 'editor' ? 'block' : 'hidden lg:flex'}`}
+            className={`flex w-full flex-col bg-cream-50 sm:w-3/5 ${activeTab === 'editor' ? 'block' : 'hidden sm:flex'}`}
           >
-            <div className="flex h-full flex-col p-6 lg:p-8">
+            <div className="flex h-full flex-col p-4 sm:p-8">
               {/* Editor Area */}
-              <div className="mb-4 flex-1">
+              <div className="mb-3 flex-1 sm:mb-4">
                 <label htmlFor="answer" className="mb-2 block text-sm font-medium text-gray-700">
                   Your Response
                 </label>
@@ -370,13 +380,13 @@ export default function ModulePage() {
                   id="answer"
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
-                  className="h-[calc(100%-28px)] w-full resize-none rounded-lg border border-gray-300 bg-white p-4 text-gray-900 placeholder-gray-400 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                  className="h-[calc(100%-28px)] w-full resize-none rounded-lg border border-gray-300 bg-white p-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 sm:p-4"
                   placeholder="Type your answer here..."
                 />
               </div>
 
               {/* Character Count */}
-              <div className="mb-4 flex items-center justify-between text-xs text-gray-500">
+              <div className="mb-3 flex items-center justify-between text-xs text-gray-500 sm:mb-4">
                 <span>
                   {answer.length} characters • {answer.trim().split(/\s+/).filter(Boolean).length}{' '}
                   words
@@ -384,10 +394,10 @@ export default function ModulePage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+              <div className="mb-3 flex flex-col gap-2.5 sm:mb-4 sm:flex-row sm:gap-3">
                 <button
                   onClick={() => setShowHints(!showHints)}
-                  className="flex-1 rounded-lg border-2 border-primary-500 bg-white px-4 py-3 text-sm font-semibold text-primary-500 transition-all hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                  className="flex-1 rounded-lg border-2 border-primary-500 bg-white px-4 py-2.5 text-sm font-semibold text-primary-500 transition-all hover:bg-primary-50 active:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 sm:py-3"
                 >
                   {showHints ? 'Hide Hints' : 'Request Hint'}
                 </button>
@@ -397,7 +407,7 @@ export default function ModulePage() {
                     console.log('Submitting answer:', answer)
                   }}
                   disabled={!answer.trim()}
-                  className="flex-1 rounded-lg bg-primary-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-600 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex-1 rounded-lg bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-600 hover:shadow-md active:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:py-3"
                 >
                   Submit Answer
                 </button>
@@ -406,7 +416,7 @@ export default function ModulePage() {
               {/* Progress Tracker */}
               {module?.exercises && module.exercises.length > 0 && (
                 <div className="rounded-lg border border-cream-300 bg-white p-3">
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="font-medium text-gray-700">Progress</span>
                     <span className="text-gray-600">
                       Exercise {currentExerciseIndex + 1} of {module.exercises.length}

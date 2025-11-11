@@ -8,7 +8,11 @@ from typing import Dict, List
 
 from anthropic import Anthropic
 from config.settings import settings
-from services.mock_data import evaluate_mock_answer, generate_mock_module
+from services.mock_data import (
+    evaluate_mock_answer,
+    extract_mock_topic_and_level,
+    generate_mock_module,
+)
 
 # Initialize Anthropic client
 client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
@@ -27,6 +31,10 @@ def extract_topic_and_level(message: str) -> Dict[str, str]:
     Raises:
         Exception: If extraction fails
     """
+    # Use mock extraction if configured (for testing without API credits)
+    if settings.USE_MOCK_CLAUDE:
+        return extract_mock_topic_and_level(message)
+
     system_prompt = """You are an expert at understanding learning requests.
 Extract the topic and skill level from the user's message.
 

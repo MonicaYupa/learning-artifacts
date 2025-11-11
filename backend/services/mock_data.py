@@ -4,7 +4,78 @@ Provides realistic mock module data and answer evaluation for testing without Cl
 """
 
 import random
+import re
 from typing import Dict
+
+
+def extract_mock_topic_and_level(message: str) -> Dict[str, str]:
+    """
+    Extract topic and skill level from user message using simple pattern matching
+
+    Args:
+        message: User's message describing what they want to learn
+
+    Returns:
+        Dictionary containing topic and skill_level
+    """
+    message_lower = message.lower()
+
+    # Extract skill level
+    skill_level = "beginner"  # Default
+    if any(word in message_lower for word in ["advanced", "expert", "senior", "experienced"]):
+        skill_level = "advanced"
+    elif any(word in message_lower for word in ["intermediate", "moderate", "some experience"]):
+        skill_level = "intermediate"
+
+    # Extract topic using common patterns
+    topic = "General Learning"  # Default
+
+    # Pattern 1: "learn about X" or "learn X"
+    learn_pattern = r"learn(?:\s+about)?\s+([a-zA-Z\s]+?)(?:\s+(?:as|at|for)|$)"
+    match = re.search(learn_pattern, message_lower)
+    if match:
+        topic = match.group(1).strip()
+
+    # Pattern 2: "I want to X" or "I'd like to X"
+    want_pattern = r"(?:want|like|interested in)\s+(?:to\s+)?(?:learn\s+)?([a-zA-Z\s]+?)(?:\s+(?:as|at|for)|$)"
+    if not match:
+        match = re.search(want_pattern, message_lower)
+        if match:
+            topic = match.group(1).strip()
+
+    # Pattern 3: Just mentioned directly (e.g., "Python" or "Product Management")
+    common_topics = {
+        "python": "Python Basics",
+        "javascript": "JavaScript Fundamentals",
+        "react": "React Development",
+        "product management": "Product Management",
+        "product": "Product Management",
+        "marketing": "Marketing Strategy",
+        "business analysis": "Business Analysis",
+        "data science": "Data Science",
+        "machine learning": "Machine Learning",
+        "web development": "Web Development",
+        "ux": "UX Design",
+        "ui": "UI Design",
+        "design": "Design Fundamentals",
+    }
+
+    for keyword, full_topic in common_topics.items():
+        if keyword in message_lower:
+            topic = full_topic
+            break
+
+    # Clean up topic
+    topic = topic.title().strip()
+
+    # If topic is too short or generic, provide a default
+    if len(topic) < 3 or topic in ["Learn", "About", "To"]:
+        topic = "General Learning"
+
+    return {
+        "topic": topic,
+        "skill_level": skill_level
+    }
 
 
 def generate_mock_module(topic: str, skill_level: str, exercise_count: int = 3) -> Dict:
