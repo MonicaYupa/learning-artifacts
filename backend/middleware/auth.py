@@ -4,10 +4,10 @@ Verifies Supabase JWT tokens using JWT signing keys (RS256)
 """
 
 import logging
+import time
 from typing import Optional
 
 import httpx
-import time
 from config.database import get_or_create_user
 from config.settings import settings
 from fastapi import Depends, HTTPException, status
@@ -140,7 +140,9 @@ async def decode_token(token: str) -> dict:
         return payload
 
     except JWTError as e:
-        logger.warning(f"JWT validation error: {str(e)}", extra={"error_type": type(e).__name__})
+        logger.warning(
+            f"JWT validation error: {str(e)}", extra={"error_type": type(e).__name__}
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=safe_error_detail("Invalid authentication credentials", e),
