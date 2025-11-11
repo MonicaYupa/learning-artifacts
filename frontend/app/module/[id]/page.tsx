@@ -73,6 +73,9 @@ export default function ModulePage() {
   const [exerciseHintMessages, setExerciseHintMessages] = useState<Map<number, ExerciseMessage[]>>(
     new Map()
   ) // Store hint messages per exercise
+  const [exerciseAssessments, setExerciseAssessments] = useState<
+    Map<number, 'strong' | 'developing' | 'needs_support'>
+  >(new Map()) // Track assessment per exercise
   const [isInitialLoad, setIsInitialLoad] = useState(true) // Track if we've loaded from localStorage yet
 
   const router = useRouter()
@@ -92,6 +95,7 @@ export default function ModulePage() {
             exerciseResponses: responses,
             exerciseHints: hints,
             exerciseHintMessages: hintMessages,
+            exerciseAssessments: assessments,
           } = JSON.parse(saved)
           if (completed && Array.isArray(completed) && completed.length > 0) {
             const completedSet = new Set<number>(completed as number[])
@@ -119,6 +123,16 @@ export default function ModulePage() {
             setExerciseHintMessages(hintMessagesMap)
             console.log('Restored hint messages:', hintMessagesMap)
           }
+          if (assessments) {
+            const assessmentsMap = new Map(
+              Object.entries(assessments).map(([k, v]) => [
+                Number(k),
+                v as 'strong' | 'developing' | 'needs_support',
+              ])
+            )
+            setExerciseAssessments(assessmentsMap)
+            console.log('Restored exercise assessments:', assessmentsMap)
+          }
         } catch (err) {
           console.error('Failed to load saved progress:', err)
         }
@@ -137,6 +151,7 @@ export default function ModulePage() {
         exerciseResponses: Object.fromEntries(exerciseResponses),
         exerciseHints: Object.fromEntries(exerciseHints),
         exerciseHintMessages: Object.fromEntries(exerciseHintMessages),
+        exerciseAssessments: Object.fromEntries(exerciseAssessments),
       }
       console.log('Persisting progress for module', params.id, ':', dataToSave)
       localStorage.setItem(storageKey, JSON.stringify(dataToSave))
@@ -147,6 +162,7 @@ export default function ModulePage() {
     exerciseResponses,
     exerciseHints,
     exerciseHintMessages,
+    exerciseAssessments,
     isInitialLoad,
   ])
 
@@ -318,6 +334,19 @@ export default function ModulePage() {
 
       // Save the assessment quality for celebration UI
       setLastAssessment(response.assessment)
+
+      // Save the assessment for this exercise
+      setExerciseAssessments((prev) => {
+        const newMap = new Map(prev)
+        newMap.set(currentExerciseIndex, response.assessment)
+        console.log(
+          'Saving assessment for exercise',
+          currentExerciseIndex,
+          ':',
+          response.assessment
+        )
+        return newMap
+      })
 
       // Show Continue button after first submission
       setShowContinueButton(true)
@@ -769,6 +798,30 @@ export default function ModulePage() {
                           const isPreviousCompleted = index > 0 && completedExercises.has(index - 1)
                           const isUnlocked = isCompleted || isCurrent || isPreviousCompleted
                           const isJustUnlocked = justUnlockedExercise === index
+                          const assessment = exerciseAssessments.get(index)
+                          const hasAttempted = assessment !== undefined
+
+                          // Determine button styling based on state and assessment
+                          const getButtonStyles = () => {
+                            if (isCurrent) {
+                              // Current exercise: keep primary orange styling with a subtle ring
+                              return 'border-primary-500 bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg scale-110 ring-2 ring-primary-300 ring-offset-2'
+                            } else if (hasAttempted) {
+                              // Has been attempted: color based on assessment
+                              if (assessment === 'strong') {
+                                return 'border-green-400 bg-gradient-to-br from-green-100 to-green-50 text-green-700 hover:scale-105 hover:border-green-500 hover:shadow-md cursor-pointer'
+                              } else if (assessment === 'developing') {
+                                return 'border-yellow-400 bg-gradient-to-br from-yellow-100 to-yellow-50 text-yellow-700 hover:scale-105 hover:border-yellow-500 hover:shadow-md cursor-pointer'
+                              } else if (assessment === 'needs_support') {
+                                return 'border-primary-400 bg-gradient-to-br from-primary-100 to-primary-50 text-primary-700 hover:scale-105 hover:border-primary-500 hover:shadow-md cursor-pointer'
+                              }
+                            } else if (isUnlocked) {
+                              // Unlocked but not attempted
+                              return 'border-neutral-400 bg-gradient-to-br from-neutral-50 to-cream-100 text-neutral-700 hover:scale-105 hover:border-primary-400 hover:shadow-md cursor-pointer'
+                            }
+                            // Locked
+                            return 'border-cream-300 bg-cream-200 text-neutral-400 cursor-not-allowed opacity-50'
+                          }
 
                           return (
                             <button
@@ -777,15 +830,7 @@ export default function ModulePage() {
                               disabled={!isUnlocked}
                               aria-label={`${isUnlocked ? 'Go to' : 'Locked'} exercise ${index + 1}${isCurrent ? ' (current)' : ''}${isCompleted ? ' (completed)' : ''}`}
                               aria-current={isCurrent ? 'step' : undefined}
-                              className={`group relative flex h-10 w-10 items-center justify-center rounded-full border-2 font-bold text-xs transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-cream-100 ${
-                                isCurrent
-                                  ? 'border-primary-500 bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg scale-110 ring-2 ring-primary-300 ring-offset-2'
-                                  : isCompleted
-                                    ? 'border-primary-400 bg-gradient-to-br from-primary-100 to-primary-50 text-primary-700 hover:scale-105 hover:border-primary-500 hover:shadow-md cursor-pointer'
-                                    : isUnlocked
-                                      ? 'border-neutral-400 bg-gradient-to-br from-neutral-50 to-cream-100 text-neutral-700 hover:scale-105 hover:border-primary-400 hover:shadow-md cursor-pointer'
-                                      : 'border-cream-300 bg-cream-200 text-neutral-400 cursor-not-allowed opacity-50'
-                              } ${isJustUnlocked ? 'animate-pulse-glow animate-scaleIn' : ''}`}
+                              className={`group relative flex h-10 w-10 items-center justify-center rounded-full border-2 font-bold text-xs transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-cream-100 ${getButtonStyles()} ${isJustUnlocked ? 'animate-pulse-glow animate-scaleIn' : ''}`}
                             >
                               {isCompleted && !isCurrent ? (
                                 // Checkmark for completed exercises
