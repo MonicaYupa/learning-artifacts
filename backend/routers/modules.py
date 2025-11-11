@@ -6,6 +6,7 @@ Provides endpoints for module generation, retrieval, and storage
 import json
 from typing import List
 
+from anthropic import RateLimitError
 from config.database import execute_query
 from fastapi import APIRouter, Depends, HTTPException, status
 from middleware.auth import get_current_user, get_current_user_id
@@ -16,7 +17,12 @@ from models.schemas import (
     ModuleResponse,
 )
 from services.claude_service import extract_topic_and_level, generate_module
-from utils.error_handler import log_and_raise_http_error, safe_error_detail
+from utils.error_handler import (
+    extract_retry_after,
+    log_and_raise_http_error,
+    log_and_raise_rate_limit_error,
+    safe_error_detail,
+)
 
 router = APIRouter()
 
@@ -220,13 +226,18 @@ async def generate_new_module(
 
     except HTTPException:
         raise
+    except RateLimitError as e:
+        log_and_raise_rate_limit_error(
+            public_message="Claude API rate limit exceeded. Please try again later.",
+            error=e,
+            retry_after=extract_retry_after(e),
+        )
     except Exception as e:
         error_message = str(e)
 
-        # Check for rate limiting
+        # Check for rate limiting in error message (fallback)
         if "rate limit" in error_message.lower() or "429" in error_message:
-            log_and_raise_http_error(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            log_and_raise_rate_limit_error(
                 public_message="Claude API rate limit exceeded. Please try again later.",
                 error=e,
             )
