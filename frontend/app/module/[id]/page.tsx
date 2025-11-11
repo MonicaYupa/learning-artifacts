@@ -51,10 +51,17 @@ export default function ModulePage() {
   const [hintsUsed, setHintsUsed] = useState(0)
   const [exerciseMessages, setExerciseMessages] = useState<ExerciseMessage[]>([])
   const [sessionId] = useState(`session-${Date.now()}`) // TODO: Get from backend
-  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false)
   const [activeTab, setActiveTab] = useState<'exercise' | 'editor'>('exercise')
   const [collapsedHints, setCollapsedHints] = useState<Set<string>>(new Set())
   const editorPanelRef = useRef<HTMLDivElement>(null)
+
+  // Continue button and unlock notification state
+  const [showContinueButton, setShowContinueButton] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
+  const [lastAssessment, setLastAssessment] = useState<
+    'strong' | 'developing' | 'needs_support' | null
+  >(null)
+  const [justUnlockedExercise, setJustUnlockedExercise] = useState<number | null>(null)
 
   // Completion modal state
   const [showCompletionModal, setShowCompletionModal] = useState(false)
@@ -309,32 +316,40 @@ export default function ModulePage() {
         })
       }
 
-      // Auto-advance logic
-      if (response.should_advance) {
-        if (response.assessment === 'strong') {
-          // Auto-advance after showing success message
-          setIsAutoAdvancing(true)
-          setTimeout(() => {
-            advanceToNextExercise()
-          }, 2000)
-        } else if (response.show_model_answer) {
-          // After 3 attempts, show model answer and advance
-          setIsAutoAdvancing(true)
-          setTimeout(() => {
-            advanceToNextExercise()
-          }, 3000)
-        }
-      } else {
+      // Save the assessment quality for celebration UI
+      setLastAssessment(response.assessment)
+
+      // Show Continue button after first submission
+      setShowContinueButton(true)
+
+      // Show celebration animation if next exercise should be unlocked
+      if (response.should_advance && currentExerciseIndex < totalExercises - 1) {
+        setShowCelebration(true)
+        setJustUnlockedExercise(currentExerciseIndex + 1)
+
+        // Hide celebration after 3 seconds
+        setTimeout(() => {
+          setShowCelebration(false)
+        }, 3000)
+
+        // Clear unlock animation after 2 seconds
+        setTimeout(() => {
+          setJustUnlockedExercise(null)
+        }, 2000)
+      }
+
+      // If should advance but user doesn't click Continue, allow retry
+      if (!response.should_advance) {
         // Increment attempt number for retry
         setCurrentAttemptNumber((prev) => prev + 1)
+      }
 
-        // Switch to exercise tab on mobile to show feedback
-        if (window.innerWidth < 640) {
-          setActiveTab('exercise')
-        }
+      // Switch to exercise tab on mobile to show feedback
+      if (window.innerWidth < 640) {
+        setActiveTab('exercise')
       }
     },
-    [currentAttemptNumber, currentExerciseIndex]
+    [currentAttemptNumber, currentExerciseIndex, totalExercises]
   )
 
   const advanceToNextExercise = () => {
@@ -388,7 +403,11 @@ export default function ModulePage() {
       'messages'
     )
 
-    setIsAutoAdvancing(false)
+    // Reset UI state
+    setShowContinueButton(false)
+    setShowCelebration(false)
+    setLastAssessment(null)
+    setJustUnlockedExercise(null)
     setCollapsedHints(new Set())
   }
 
@@ -749,6 +768,7 @@ export default function ModulePage() {
                           // Unlock if completed, current, or if previous exercise is completed
                           const isPreviousCompleted = index > 0 && completedExercises.has(index - 1)
                           const isUnlocked = isCompleted || isCurrent || isPreviousCompleted
+                          const isJustUnlocked = justUnlockedExercise === index
 
                           return (
                             <button
@@ -765,7 +785,7 @@ export default function ModulePage() {
                                     : isUnlocked
                                       ? 'border-neutral-400 bg-gradient-to-br from-neutral-50 to-cream-100 text-neutral-700 hover:scale-105 hover:border-primary-400 hover:shadow-md cursor-pointer'
                                       : 'border-cream-300 bg-cream-200 text-neutral-400 cursor-not-allowed opacity-50'
-                              }`}
+                              } ${isJustUnlocked ? 'animate-pulse-glow animate-scaleIn' : ''}`}
                             >
                               {isCompleted && !isCurrent ? (
                                 // Checkmark for completed exercises
@@ -833,7 +853,42 @@ export default function ModulePage() {
                     renderFeedback={() => (
                       <>
                         {exerciseMessages.length > 0 && (
-                          <div className="mb-4 space-y-3 sm:mb-6">
+                          <div className="relative mb-4 space-y-3 sm:mb-6">
+                            {/* Celebration Animation Overlay - appears over feedback */}
+                            {showCelebration && (
+                              <div
+                                className="pointer-events-none absolute inset-0 z-10 overflow-hidden rounded-lg"
+                                role="status"
+                                aria-live="polite"
+                                aria-label="Next exercise unlocked"
+                              >
+                                {/* Confetti particles */}
+                                <div className="absolute inset-0">
+                                  {[...Array(20)].map((_, i) => (
+                                    <div
+                                      key={i}
+                                      className="confetti-particle absolute"
+                                      style={{
+                                        left: `${Math.random() * 100}%`,
+                                        top: '-10%',
+                                        width: `${Math.random() * 8 + 4}px`,
+                                        height: `${Math.random() * 8 + 4}px`,
+                                        backgroundColor: [
+                                          '#d97757',
+                                          '#f1875e',
+                                          '#f7b099',
+                                          '#fbd2c3',
+                                        ][Math.floor(Math.random() * 4)],
+                                        animationDelay: `${Math.random() * 0.5}s`,
+                                        animationDuration: `${Math.random() * 2 + 2.5}s`,
+                                        transform: `rotate(${Math.random() * 360}deg)`,
+                                      }}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
                             {exerciseMessages.map((message, idx) => (
                               <div
                                 key={message.id}
@@ -856,26 +911,110 @@ export default function ModulePage() {
                       </>
                     )}
                     renderSubmitButton={(submitProps) => (
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                        {/* Hint Button - Left */}
-                        <HintSystem
-                          sessionId={sessionId}
-                          currentHintLevel={hintsUsed}
-                          maxHints={maxHints}
-                          onHintReceived={handleHintReceived}
-                          renderHintButton={(hintProps) => (
+                      <div className="flex flex-col gap-3">
+                        {/* Button Row */}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                          {/* Hint Button - Left */}
+                          <HintSystem
+                            sessionId={sessionId}
+                            currentHintLevel={hintsUsed}
+                            maxHints={maxHints}
+                            onHintReceived={handleHintReceived}
+                            renderHintButton={(hintProps) => (
+                              <button
+                                onClick={hintProps.onClick}
+                                disabled={hintProps.disabled}
+                                aria-label={
+                                  hintProps.allHintsUsed
+                                    ? 'All hints used'
+                                    : `Request hint ${hintProps.currentHintLevel + 1} of ${hintProps.maxHints}`
+                                }
+                                className="w-full rounded-lg border-2 border-neutral-600 bg-neutral-700 px-4 py-2.5 text-sm font-semibold text-neutral-200 transition-all hover:bg-neutral-600 active:bg-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-neutral-700 sm:w-auto sm:px-6"
+                              >
+                                <span className="flex items-center justify-center gap-2">
+                                  {hintProps.isLoading ? (
+                                    <>
+                                      <svg
+                                        className="h-4 w-4 animate-spin"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                      >
+                                        <circle
+                                          className="opacity-25"
+                                          cx="12"
+                                          cy="12"
+                                          r="10"
+                                          stroke="currentColor"
+                                          strokeWidth="4"
+                                        ></circle>
+                                        <path
+                                          className="opacity-75"
+                                          fill="currentColor"
+                                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                        ></path>
+                                      </svg>
+                                      <span>Loading...</span>
+                                    </>
+                                  ) : hintProps.allHintsUsed ? (
+                                    <>
+                                      <svg
+                                        className="h-5 w-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
+                                      </svg>
+                                      <span>All Hints Used</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg
+                                        className="h-5 w-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                                        />
+                                      </svg>
+                                      <span>Hint</span>
+                                      {hintProps.currentHintLevel > 0 && (
+                                        <span className="text-xs">
+                                          ({hintProps.currentHintLevel}/{hintProps.maxHints})
+                                        </span>
+                                      )}
+                                    </>
+                                  )}
+                                </span>
+                              </button>
+                            )}
+                          />
+
+                          {/* Submit and Continue buttons grouped on the right */}
+                          <div className="flex flex-col gap-3 sm:flex-row sm:gap-3">
+                            {/* Submit Button */}
                             <button
-                              onClick={hintProps.onClick}
-                              disabled={hintProps.disabled || isAutoAdvancing}
-                              aria-label={
-                                hintProps.allHintsUsed
-                                  ? 'All hints used'
-                                  : `Request hint ${hintProps.currentHintLevel + 1} of ${hintProps.maxHints}`
-                              }
-                              className="w-full rounded-lg border-2 border-neutral-600 bg-neutral-700 px-4 py-2.5 text-sm font-semibold text-neutral-200 transition-all hover:bg-neutral-600 active:bg-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-neutral-700 sm:w-auto sm:px-6"
+                              onClick={submitProps.onClick}
+                              disabled={submitProps.disabled}
+                              aria-label={`${showContinueButton ? 'Resubmit' : 'Submit'} answer ${submitProps.isSubmitting ? '(submitting...)' : ''}`}
+                              className="w-full rounded-lg bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-600 hover:shadow-md active:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary-500 disabled:hover:shadow-sm sm:w-auto sm:px-6"
                             >
                               <span className="flex items-center justify-center gap-2">
-                                {hintProps.isLoading ? (
+                                {submitProps.isSubmitting ? (
                                   <>
                                     <svg
                                       className="h-4 w-4 animate-spin"
@@ -898,25 +1037,7 @@ export default function ModulePage() {
                                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                       ></path>
                                     </svg>
-                                    <span>Loading...</span>
-                                  </>
-                                ) : hintProps.allHintsUsed ? (
-                                  <>
-                                    <svg
-                                      className="h-5 w-5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                      aria-hidden="true"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                      />
-                                    </svg>
-                                    <span>All Hints Used</span>
+                                    <span>Submitting...</span>
                                   </>
                                 ) : (
                                   <>
@@ -931,76 +1052,71 @@ export default function ModulePage() {
                                         strokeLinecap="round"
                                         strokeLinejoin="round"
                                         strokeWidth={2}
-                                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                                        d="M5 13l4 4L19 7"
                                       />
                                     </svg>
-                                    <span>Hint</span>
-                                    {hintProps.currentHintLevel > 0 && (
-                                      <span className="text-xs">
-                                        ({hintProps.currentHintLevel}/{hintProps.maxHints})
-                                      </span>
-                                    )}
+                                    <span>{showContinueButton ? 'Resubmit' : 'Submit'}</span>
                                   </>
                                 )}
                               </span>
                             </button>
-                          )}
-                        />
 
-                        {/* Submit Button - Right */}
-                        <button
-                          onClick={submitProps.onClick}
-                          disabled={submitProps.disabled || isAutoAdvancing}
-                          aria-label={`Submit answer ${submitProps.isSubmitting ? '(submitting...)' : ''}`}
-                          className="w-full rounded-lg bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-600 hover:shadow-md active:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary-500 disabled:hover:shadow-sm sm:w-auto sm:px-6"
-                        >
-                          <span className="flex items-center justify-center gap-2">
-                            {submitProps.isSubmitting ? (
-                              <>
-                                <svg
-                                  className="h-4 w-4 animate-spin"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  aria-hidden="true"
-                                >
-                                  <circle
-                                    className="opacity-25"
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    strokeWidth="4"
-                                  ></circle>
-                                  <path
-                                    className="opacity-75"
-                                    fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                  ></path>
-                                </svg>
-                                <span>Submitting...</span>
-                              </>
-                            ) : (
-                              <>
-                                <svg
-                                  className="h-5 w-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  aria-hidden="true"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
-                                <span>Submit</span>
-                              </>
+                            {/* Continue Button - Shows after first submission */}
+                            {showContinueButton && (
+                              <button
+                                onClick={() => {
+                                  if (currentExerciseIndex < totalExercises - 1) {
+                                    advanceToNextExercise()
+                                  } else {
+                                    // Last exercise - show completion modal
+                                    setShowCompletionModal(true)
+                                  }
+                                }}
+                                className="animate-fadeInUp w-full rounded-lg border-2 border-primary-500 bg-primary-500/10 px-4 py-2.5 text-sm font-medium text-primary-400 shadow-sm transition-all hover:border-primary-500 hover:bg-primary-500 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-neutral-800 sm:w-auto sm:px-6"
+                              >
+                                <span className="flex items-center justify-center gap-2">
+                                  {currentExerciseIndex < totalExercises - 1 ? (
+                                    <>
+                                      <span>Continue</span>
+                                      <svg
+                                        className="h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M13 7l5 5m0 0l-5 5m5-5H6"
+                                        />
+                                      </svg>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span>Complete</span>
+                                      <svg
+                                        className="h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M5 13l4 4L19 7"
+                                        />
+                                      </svg>
+                                    </>
+                                  )}
+                                </span>
+                              </button>
                             )}
-                          </span>
-                        </button>
+                          </div>
+                        </div>
                       </div>
                     )}
                   />
@@ -1071,21 +1187,6 @@ export default function ModulePage() {
                           </div>
                         )
                     )}
-                  </div>
-                )}
-
-                {/* Auto-advance notification */}
-                {isAutoAdvancing && (
-                  <div
-                    className="mb-3 rounded-lg border border-green-300 bg-green-50 p-3 text-center sm:mb-4"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <p className="text-sm text-green-800">
-                      {currentExerciseIndex < totalExercises - 1
-                        ? 'Great job! Moving to next exercise...'
-                        : 'Module complete! Returning to dashboard...'}
-                    </p>
                   </div>
                 )}
               </div>
