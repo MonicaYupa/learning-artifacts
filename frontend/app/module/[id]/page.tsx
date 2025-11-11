@@ -773,13 +773,13 @@ export default function ModulePage() {
                           className={`animate-fadeInUp stagger-${Math.min(idx + 1, 5)}`}
                         >
                           <div
-                            className="rounded-lg border border-primary-500/30 bg-neutral-800"
+                            className="rounded-lg border border-primary-500/30 bg-neutral-800 focus-within:ring-2 focus-within:ring-primary-500/50"
                             role="region"
                             aria-label="Hint message"
                           >
                             <button
                               onClick={() => toggleHintCollapse(message.id)}
-                              className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-neutral-750 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                              className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-neutral-750 focus:outline-none"
                               aria-expanded={!collapsedHints.has(message.id)}
                             >
                               <div className="flex items-center gap-2">
