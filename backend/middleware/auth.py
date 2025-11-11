@@ -3,6 +3,7 @@ JWT Authentication Middleware
 Verifies Supabase JWT tokens using JWT signing keys (RS256)
 """
 
+import logging
 from typing import Optional
 
 import httpx
@@ -13,6 +14,10 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from jose.utils import base64url_decode
+from utils.error_handler import safe_error_detail
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 # HTTP Bearer token scheme
 security = HTTPBearer()
@@ -52,9 +57,10 @@ async def get_supabase_jwks() -> dict:
             _jwks_cache_timestamp = current_time
             return _jwks_cache
     except Exception as e:
+        logger.error("Failed to fetch JWKS from Supabase", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch JWKS: {str(e)}",
+            detail=safe_error_detail("Failed to fetch authentication keys", e),
         )
 
 
@@ -134,15 +140,17 @@ async def decode_token(token: str) -> dict:
         return payload
 
     except JWTError as e:
+        logger.warning(f"JWT validation error: {str(e)}", extra={"error_type": type(e).__name__})
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid authentication credentials: {str(e)}",
+            detail=safe_error_detail("Invalid authentication credentials", e),
             headers={"WWW-Authenticate": "Bearer"},
         )
     except Exception as e:
+        logger.error("Token verification failed", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Token verification failed: {str(e)}",
+            detail=safe_error_detail("Token verification failed", e),
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -188,9 +196,10 @@ async def get_current_user(
         return user
 
     except Exception as e:
+        logger.error("Error fetching user from database", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching user: {str(e)}",
+            detail=safe_error_detail("Error fetching user", e),
         )
 
 

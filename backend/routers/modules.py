@@ -16,6 +16,7 @@ from models.schemas import (
     ModuleResponse,
 )
 from services.claude_service import extract_topic_and_level, generate_module
+from utils.error_handler import log_and_raise_http_error, safe_error_detail
 
 router = APIRouter()
 
@@ -59,9 +60,10 @@ async def list_modules(user_id: str = Depends(get_current_user_id)):
         return modules if modules else []
 
     except Exception as e:
-        raise HTTPException(
+        log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve modules: {str(e)}",
+            public_message="Failed to retrieve modules",
+            error=e,
         )
 
 
@@ -131,9 +133,10 @@ async def get_module(module_id: str, user_id: str = Depends(get_current_user_id)
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
+        log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve module: {str(e)}",
+            public_message="Failed to retrieve module",
+            error=e,
         )
 
 
@@ -222,13 +225,15 @@ async def generate_new_module(
 
         # Check for rate limiting
         if "rate limit" in error_message.lower() or "429" in error_message:
-            raise HTTPException(
+            log_and_raise_http_error(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Claude API rate limit exceeded. Please try again later.",
+                public_message="Claude API rate limit exceeded. Please try again later.",
+                error=e,
             )
 
         # General error
-        raise HTTPException(
+        log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Module generation failed: {error_message}",
+            public_message="Module generation failed",
+            error=e,
         )

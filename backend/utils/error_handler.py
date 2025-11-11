@@ -1,0 +1,92 @@
+"""
+Error Handling Utilities
+Provides secure error handling with logging and environment-aware error messages
+"""
+
+import logging
+from typing import Optional
+
+from config.settings import settings
+from fastapi import HTTPException, status
+
+# Configure logger
+logger = logging.getLogger(__name__)
+
+
+def log_and_raise_http_error(
+    status_code: int,
+    public_message: str,
+    error: Optional[Exception] = None,
+    log_level: str = "error",
+) -> None:
+    """
+    Log detailed error information and raise HTTPException with environment-appropriate message.
+
+    In development: Returns detailed error messages for debugging
+    In production: Returns generic error messages to prevent information leakage
+
+    Args:
+        status_code: HTTP status code to return
+        public_message: Generic message safe to show users in production
+        error: The original exception (optional)
+        log_level: Logging level (debug, info, warning, error, critical)
+
+    Raises:
+        HTTPException: Always raises with appropriate detail message
+    """
+    # Log the detailed error server-side
+    log_func = getattr(logger, log_level.lower(), logger.error)
+
+    if error:
+        log_func(
+            f"Error occurred: {public_message}",
+            exc_info=True,
+            extra={
+                "status_code": status_code,
+                "error_type": type(error).__name__,
+                "error_message": str(error),
+            },
+        )
+    else:
+        log_func(
+            f"Error occurred: {public_message}",
+            extra={"status_code": status_code},
+        )
+
+    # Determine what detail to send to client
+    if settings.ENVIRONMENT == "development":
+        # In development, include detailed error information
+        detail = f"{public_message}: {str(error)}" if error else public_message
+    else:
+        # In production, only return the generic public message
+        detail = public_message
+
+    raise HTTPException(status_code=status_code, detail=detail)
+
+
+def safe_error_detail(
+    public_message: str,
+    error: Optional[Exception] = None,
+) -> str:
+    """
+    Return environment-appropriate error detail string.
+
+    Args:
+        public_message: Generic message safe to show users
+        error: The original exception (optional)
+
+    Returns:
+        Detailed message in development, generic message in production
+    """
+    if settings.ENVIRONMENT == "development" and error:
+        return f"{public_message}: {str(error)}"
+    return public_message
+
+
+# Common HTTP status codes for convenience
+HTTP_400_BAD_REQUEST = status.HTTP_400_BAD_REQUEST
+HTTP_401_UNAUTHORIZED = status.HTTP_401_UNAUTHORIZED
+HTTP_403_FORBIDDEN = status.HTTP_403_FORBIDDEN
+HTTP_404_NOT_FOUND = status.HTTP_404_NOT_FOUND
+HTTP_429_TOO_MANY_REQUESTS = status.HTTP_429_TOO_MANY_REQUESTS
+HTTP_500_INTERNAL_SERVER_ERROR = status.HTTP_500_INTERNAL_SERVER_ERROR

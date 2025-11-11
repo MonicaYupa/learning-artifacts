@@ -20,6 +20,7 @@ from models.schemas import (
     SessionUpdateRequest,
 )
 from services.claude_service import evaluate_answer
+from utils.error_handler import log_and_raise_http_error, safe_error_detail
 
 router = APIRouter()
 
@@ -131,9 +132,10 @@ async def create_session(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
+        log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Session creation failed: {str(e)}",
+            public_message="Session creation failed",
+            error=e,
         )
 
 
@@ -202,9 +204,10 @@ async def get_session(session_id: str, user_id: str = Depends(get_current_user_i
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
+        log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve session: {str(e)}",
+            public_message="Failed to retrieve session",
+            error=e,
         )
 
 
@@ -247,27 +250,59 @@ async def update_session(
         # Verify ownership
         await verify_session_ownership(session_id, user_id)
 
+        # Whitelist of allowed column names to prevent SQL injection
+        ALLOWED_COLUMNS = {
+            "current_exercise_index",
+            "status",
+            "confidence_rating",
+            "completed_at",
+        }
+
         # Build dynamic update query based on provided fields
-        update_fields = []
+        update_clauses = []
         params = []
 
         if request.current_exercise_index is not None:
-            update_fields.append("current_exercise_index = %s")
+            column = "current_exercise_index"
+            if column not in ALLOWED_COLUMNS:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Invalid column name",
+                )
+            update_clauses.append(f"{column} = %s")
             params.append(request.current_exercise_index)
 
         if request.status is not None:
-            update_fields.append("status = %s")
+            column = "status"
+            if column not in ALLOWED_COLUMNS:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Invalid column name",
+                )
+            update_clauses.append(f"{column} = %s")
             params.append(request.status.value)
 
             # If marking as completed, set completed_at
             if request.status.value == "completed":
-                update_fields.append("completed_at = NOW()")
+                completed_column = "completed_at"
+                if completed_column not in ALLOWED_COLUMNS:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Invalid column name",
+                    )
+                update_clauses.append(f"{completed_column} = NOW()")
 
         if request.confidence_rating is not None:
-            update_fields.append("confidence_rating = %s")
+            column = "confidence_rating"
+            if column not in ALLOWED_COLUMNS:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Invalid column name",
+                )
+            update_clauses.append(f"{column} = %s")
             params.append(request.confidence_rating)
 
-        if not update_fields:
+        if not update_clauses:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No fields provided for update",
@@ -276,9 +311,11 @@ async def update_session(
         # Add session_id to params
         params.append(session_id)
 
+        # Build query with whitelisted columns only
+        # All column names have been validated against ALLOWED_COLUMNS
         query = f"""
             UPDATE sessions
-            SET {', '.join(update_fields)}
+            SET {', '.join(update_clauses)}
             WHERE id = %s
             RETURNING id, user_id, module_id, current_exercise_index, attempts,
                       status, confidence_rating, started_at, completed_at
@@ -297,9 +334,10 @@ async def update_session(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
+        log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Session update failed: {str(e)}",
+            public_message="Session update failed",
+            error=e,
         )
 
 
@@ -451,14 +489,16 @@ async def submit_answer(
 
         # Check for rate limiting
         if "rate limit" in error_message.lower() or "429" in error_message:
-            raise HTTPException(
+            log_and_raise_http_error(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Claude API rate limit exceeded. Please try again later.",
+                public_message="Claude API rate limit exceeded. Please try again later.",
+                error=e,
             )
 
-        raise HTTPException(
+        log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Answer submission failed: {error_message}",
+            public_message="Answer submission failed",
+            error=e,
         )
 
 
@@ -586,7 +626,8 @@ async def request_hint(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
+        log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Hint request failed: {str(e)}",
+            public_message="Hint request failed",
+            error=e,
         )
