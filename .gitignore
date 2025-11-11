@@ -35,6 +35,14 @@ yarn-error.log*
 out/
 build/
 dist/
+.pnp
+.pnp.js
+
+# Next.js specific
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+.swc
 
 # Environment variables
 .env
@@ -51,6 +59,9 @@ dist/
 *~
 .DS_Store
 .claude
+
+# Certificates
+*.pem
 
 # Testing
 .coverage

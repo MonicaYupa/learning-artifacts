@@ -1,0 +1,22 @@
+{
+  "name": "learning-artifacts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-powered learning platform with interactive exercises",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.6.2"
+  },
+  "lint-staged": {
+    "frontend/**/*.{js,jsx,ts,tsx,json,css,md}": [
+      "prettier --write"
+    ]
+  }
+}

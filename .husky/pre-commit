@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# Run frontend linting (using root lint-staged config)
+npx lint-staged
+
+# Run backend pre-commit (Python linting)
+
+# Get staged Python files in backend (grep returns 1 if no matches, so use || true)
+PYTHON_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep "^backend/.*\.py$" || true)
+
+if [ -n "$PYTHON_FILES" ] && [ -f .pre-commit-config.yaml ]; then
+    echo "Running Python pre-commit hooks on staged files..."
+
+    # Use pre-commit from venv if available, otherwise try global
+    if [ -x "./venv/bin/pre-commit" ]; then
+        PRE_COMMIT_CMD="./venv/bin/pre-commit"
+    elif command -v pre-commit > /dev/null; then
+        PRE_COMMIT_CMD="pre-commit"
+    else
+        echo "Warning: pre-commit not found, skipping Python checks"
+        exit 0
+    fi
+
+    echo "$PYTHON_FILES" | xargs $PRE_COMMIT_CMD run --files
+fi
