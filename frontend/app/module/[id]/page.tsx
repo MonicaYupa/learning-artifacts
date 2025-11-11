@@ -32,7 +32,7 @@ interface Module {
   exercises?: Exercise[]
 }
 
-interface ChatMessage {
+interface ExerciseMessage {
   id: string
   type: 'hint' | 'feedback'
   content: string
@@ -49,7 +49,7 @@ export default function ModulePage() {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
   const [currentAttemptNumber, setCurrentAttemptNumber] = useState(1)
   const [hintsUsed, setHintsUsed] = useState(0)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [exerciseMessages, setExerciseMessages] = useState<ExerciseMessage[]>([])
   const [sessionId] = useState(`session-${Date.now()}`) // TODO: Get from backend
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false)
   const [activeTab, setActiveTab] = useState<'exercise' | 'editor'>('exercise')
@@ -63,7 +63,7 @@ export default function ModulePage() {
   const [completedExercises, setCompletedExercises] = useState<Set<number>>(new Set()) // Tracks truly completed exercises
   const [exerciseResponses, setExerciseResponses] = useState<Map<number, string>>(new Map())
   const [exerciseHints, setExerciseHints] = useState<Map<number, number>>(new Map()) // Track hints used per exercise
-  const [exerciseHintMessages, setExerciseHintMessages] = useState<Map<number, ChatMessage[]>>(
+  const [exerciseHintMessages, setExerciseHintMessages] = useState<Map<number, ExerciseMessage[]>>(
     new Map()
   ) // Store hint messages per exercise
   const [isInitialLoad, setIsInitialLoad] = useState(true) // Track if we've loaded from localStorage yet
@@ -107,7 +107,7 @@ export default function ModulePage() {
           }
           if (hintMessages) {
             const hintMessagesMap = new Map(
-              Object.entries(hintMessages).map(([k, v]) => [Number(k), v as ChatMessage[]])
+              Object.entries(hintMessages).map(([k, v]) => [Number(k), v as ExerciseMessage[]])
             )
             setExerciseHintMessages(hintMessagesMap)
             console.log('Restored hint messages:', hintMessagesMap)
@@ -206,9 +206,9 @@ export default function ModulePage() {
     console.log('Restored hints for exercise', currentExerciseIndex, ':', savedHints)
 
     const savedHintMessages = exerciseHintMessages.get(currentExerciseIndex) || []
-    // Only update chat messages if they are currently empty or only contain hints
+    // Only update exercise messages if they are currently empty or only contain hints
     // This prevents overwriting feedback messages when advancing to next exercise
-    setChatMessages((prev) => {
+    setExerciseMessages((prev) => {
       const hasFeedback = prev.some((msg) => msg.type === 'feedback')
       return hasFeedback ? prev : savedHintMessages
     })
@@ -228,14 +228,14 @@ export default function ModulePage() {
   // Handle hint received
   const handleHintReceived = useCallback(
     (response: HintResponse) => {
-      const newMessage: ChatMessage = {
+      const newMessage: ExerciseMessage = {
         id: `hint-${Date.now()}`,
         type: 'hint',
         content: response.hint,
         timestamp: new Date(),
       }
 
-      setChatMessages((prev) => [...prev, newMessage])
+      setExerciseMessages((prev) => [...prev, newMessage])
       setHintsUsed(response.hint_level)
 
       // Persist hints used for this exercise
@@ -281,7 +281,7 @@ export default function ModulePage() {
   // Handle submission success
   const handleSubmitSuccess = useCallback(
     (response: SubmitResponse, submittedAnswer: string) => {
-      const newMessage: ChatMessage = {
+      const newMessage: ExerciseMessage = {
         id: `feedback-${Date.now()}`,
         type: 'feedback',
         content: response.feedback,
@@ -291,7 +291,8 @@ export default function ModulePage() {
         modelAnswer: response.model_answer,
       }
 
-      setChatMessages((prev) => [...prev, newMessage])
+      // Replace old feedback with new feedback (keep only hints)
+      setExerciseMessages((prev) => [...prev.filter((msg) => msg.type === 'hint'), newMessage])
 
       // Save the submitted answer (for all submissions, not just successful ones)
       if (submittedAnswer.trim()) {
@@ -378,7 +379,7 @@ export default function ModulePage() {
 
     // Restore hint messages for this exercise
     const savedHintMessages = exerciseHintMessages.get(targetExercise) || []
-    setChatMessages(savedHintMessages)
+    setExerciseMessages(savedHintMessages)
     console.log(
       'Restored hint messages for exercise',
       targetExercise,
@@ -829,6 +830,31 @@ export default function ModulePage() {
                       )
                       return savedAnswer
                     })()}
+                    renderFeedback={() => (
+                      <>
+                        {exerciseMessages.length > 0 && (
+                          <div className="mb-4 space-y-3 sm:mb-6">
+                            {exerciseMessages.map((message, idx) => (
+                              <div
+                                key={message.id}
+                                className={`animate-fadeInUp stagger-${Math.min(idx + 1, 5)}`}
+                              >
+                                {message.type === 'feedback' && (
+                                  <div className="ring-2 ring-primary-400/20 rounded-lg">
+                                    <FeedbackDisplay
+                                      assessment={message.assessment!}
+                                      feedback={message.content}
+                                      attemptNumber={message.attemptNumber!}
+                                      modelAnswer={message.modelAnswer}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
                     renderSubmitButton={(submitProps) => (
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                         {/* Hint Button - Left */}
@@ -980,10 +1006,10 @@ export default function ModulePage() {
                   />
                 </div>
 
-                {/* Hints Display - Below hint button */}
-                {chatMessages.some((msg) => msg.type === 'hint') && (
+                {/* Hints Display - Below answer submission */}
+                {exerciseMessages.some((msg) => msg.type === 'hint') && (
                   <div className="mb-3 space-y-3 sm:mb-4">
-                    {chatMessages.map(
+                    {exerciseMessages.map(
                       (message, idx) =>
                         message.type === 'hint' && (
                           <div
@@ -1045,27 +1071,6 @@ export default function ModulePage() {
                           </div>
                         )
                     )}
-                  </div>
-                )}
-
-                {/* Feedback Display - Below answer submission */}
-                {chatMessages.length > 0 && (
-                  <div className="mb-3 space-y-3 sm:mb-4">
-                    {chatMessages.map((message, idx) => (
-                      <div
-                        key={message.id}
-                        className={`animate-fadeInUp stagger-${Math.min(idx + 1, 5)}`}
-                      >
-                        {message.type === 'feedback' && (
-                          <FeedbackDisplay
-                            assessment={message.assessment!}
-                            feedback={message.content}
-                            attemptNumber={message.attemptNumber!}
-                            modelAnswer={message.modelAnswer}
-                          />
-                        )}
-                      </div>
-                    ))}
                   </div>
                 )}
 

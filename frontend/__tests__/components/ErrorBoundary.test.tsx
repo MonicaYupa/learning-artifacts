@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -139,7 +138,7 @@ describe('ErrorBoundary', () => {
       let shouldThrow = true
       const TestComponent = () => <ThrowError shouldThrow={shouldThrow} />
 
-      const { rerender } = render(
+      render(
         <ErrorBoundary>
           <TestComponent />
         </ErrorBoundary>
@@ -186,25 +185,23 @@ describe('ErrorBoundary', () => {
       // This test verifies that error boundaries don't automatically retry
       // rendering when just props change, unless resetKeys change
 
-      let propValue = 'initial'
-      const PropsChangingComponent = ({ value }: { value: string }) => {
+      const PropsChangingComponent = () => {
         return <ThrowError />
       }
 
       const { rerender } = render(
         <ErrorBoundary resetKeys={['key1']}>
-          <PropsChangingComponent value={propValue} />
+          <PropsChangingComponent />
         </ErrorBoundary>
       )
 
       // Error state should be shown
       expect(screen.getByText('Something went wrong')).toBeInTheDocument()
 
-      // Change props but keep same resetKeys
-      propValue = 'changed'
+      // Rerender with same resetKeys
       rerender(
         <ErrorBoundary resetKeys={['key1']}>
-          <PropsChangingComponent value={propValue} />
+          <PropsChangingComponent />
         </ErrorBoundary>
       )
 
@@ -218,11 +215,19 @@ describe('ErrorBoundary', () => {
     const originalEnv = process.env.NODE_ENV
 
     beforeEach(() => {
-      process.env.NODE_ENV = 'development'
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: 'development',
+        writable: true,
+        configurable: true,
+      })
     })
 
     afterEach(() => {
-      process.env.NODE_ENV = originalEnv
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: originalEnv,
+        writable: true,
+        configurable: true,
+      })
     })
 
     it('shows error details in development mode', () => {
@@ -255,11 +260,19 @@ describe('ErrorBoundary', () => {
     const originalEnv = process.env.NODE_ENV
 
     beforeEach(() => {
-      process.env.NODE_ENV = 'production'
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: 'production',
+        writable: true,
+        configurable: true,
+      })
     })
 
     afterEach(() => {
-      process.env.NODE_ENV = originalEnv
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: originalEnv,
+        writable: true,
+        configurable: true,
+      })
     })
 
     it('does not show error details in production mode', () => {

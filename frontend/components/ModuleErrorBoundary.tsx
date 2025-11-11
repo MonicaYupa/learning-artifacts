@@ -15,12 +15,8 @@ interface ModuleErrorFallbackProps {
  * Custom error fallback for module pages
  * Provides module-specific error handling and recovery options
  */
-function ModuleErrorFallback({ error, reset }: ModuleErrorFallbackProps) {
+function ModuleErrorFallback({ error }: ModuleErrorFallbackProps) {
   const router = useRouter()
-
-  const handleReturnToModules = () => {
-    router.push('/module')
-  }
 
   const handleReturnHome = () => {
     router.push('/')
@@ -63,22 +59,6 @@ function ModuleErrorFallback({ error, reset }: ModuleErrorFallbackProps) {
         {/* Action Buttons */}
         <div className="mb-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <button
-            onClick={reset}
-            className="w-full rounded-lg bg-primary-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-600 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-neutral-800 sm:w-auto"
-            aria-label="Try loading module again"
-          >
-            Try Again
-          </button>
-
-          <button
-            onClick={handleReturnToModules}
-            className="w-full rounded-lg border-2 border-neutral-600 bg-neutral-700 px-6 py-3 text-sm font-semibold text-neutral-200 transition-all hover:border-neutral-500 hover:bg-neutral-600 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2 focus:ring-offset-neutral-800 sm:w-auto"
-            aria-label="Return to modules list"
-          >
-            Back to Modules
-          </button>
-
-          <button
             onClick={handleReturnHome}
             className="w-full rounded-lg border-2 border-neutral-700 bg-transparent px-6 py-3 text-sm font-semibold text-neutral-300 transition-all hover:border-neutral-600 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2 focus:ring-offset-neutral-800 sm:w-auto"
             aria-label="Go to home page"
@@ -104,7 +84,7 @@ function ModuleErrorFallback({ error, reset }: ModuleErrorFallbackProps) {
 
         {/* Help Text */}
         <p className="mt-6 text-center text-sm text-neutral-400">
-          If this problem persists, please refresh the page or contact support.
+          If this problem persists, please refresh the page or contact monica.yupa@gmail.com.
         </p>
       </div>
     </div>
@@ -130,7 +110,7 @@ export default function ModuleErrorBoundary({ children, moduleId }: ModuleErrorB
           componentStack: errorInfo.componentStack,
         })
       }}
-      resetKeys={[moduleId]}
+      resetKeys={moduleId ? [moduleId] : []}
     >
       {children}
     </ErrorBoundary>

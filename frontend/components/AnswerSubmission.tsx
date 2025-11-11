@@ -15,6 +15,7 @@ interface AnswerSubmissionProps {
     isSubmitting: boolean
     isAnswerEmpty: boolean
   }) => React.ReactNode
+  renderFeedback?: () => React.ReactNode
 }
 
 export default function AnswerSubmission({
@@ -23,6 +24,7 @@ export default function AnswerSubmission({
   onSubmitSuccess,
   initialAnswer = '',
   renderSubmitButton,
+  renderFeedback,
 }: AnswerSubmissionProps) {
   const [answer, setAnswer] = useState(initialAnswer)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -88,6 +90,10 @@ export default function AnswerSubmission({
         >
           Workspace
         </label>
+
+        {/* Feedback Display - Below Workspace header */}
+        {renderFeedback && renderFeedback()}
+
         <textarea
           id="answer"
           value={answer}

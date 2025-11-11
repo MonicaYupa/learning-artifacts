@@ -122,7 +122,7 @@ interface DefaultErrorFallbackProps {
  * Default error fallback UI
  * Shows a user-friendly error message with option to retry
  */
-function DefaultErrorFallback({ error, errorInfo, reset }: DefaultErrorFallbackProps) {
+function DefaultErrorFallback({ error, errorInfo }: DefaultErrorFallbackProps) {
   const isDevelopment = process.env.NODE_ENV === 'development'
 
   return (
@@ -158,16 +158,8 @@ function DefaultErrorFallback({ error, errorInfo, reset }: DefaultErrorFallbackP
           We encountered an unexpected error. Don't worry, your progress has been saved.
         </p>
 
-        {/* Action Buttons */}
+        {/* Action Button */}
         <div className="mb-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <button
-            onClick={reset}
-            className="w-full rounded-lg bg-primary-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-600 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 sm:w-auto"
-            aria-label="Try again"
-          >
-            Try Again
-          </button>
-
           <button
             onClick={() => (window.location.href = '/')}
             className="w-full rounded-lg border-2 border-neutral-300 bg-white px-6 py-3 text-sm font-semibold text-neutral-700 transition-all hover:border-neutral-400 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2 sm:w-auto"
@@ -220,7 +212,7 @@ function DefaultErrorFallback({ error, errorInfo, reset }: DefaultErrorFallbackP
 
         {/* Help Text */}
         <p className="mt-6 text-center text-sm text-neutral-500">
-          If this problem persists, please contact support or try refreshing the page.
+          If this problem persists, please contact monica.yupa@gmail.com or try refreshing the page.
         </p>
       </div>
     </div>
