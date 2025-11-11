@@ -166,8 +166,8 @@ export default function ModulePage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push('/auth/login')
-    router.refresh()
+    // Use window.location for a hard redirect to ensure proper cleanup
+    window.location.href = '/auth/login'
   }
 
   const handleSendMessage = async (e: React.FormEvent) => {
