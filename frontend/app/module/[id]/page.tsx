@@ -406,142 +406,118 @@ export default function ModulePage() {
   const renderExercise = (exercise: Exercise) => {
     return (
       <div className="space-y-4 sm:space-y-5">
-        {/* Exercise Prompt */}
-        <div className="animate-scaleIn rounded-xl bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 p-5 shadow-[0_8px_24px_rgba(217,119,87,0.35),0_4px_12px_rgba(0,0,0,0.2)] ring-1 ring-white/10 sm:p-6">
-          <p className="relative z-10 whitespace-pre-wrap text-sm leading-7 text-white drop-shadow-sm sm:text-base sm:leading-8">
-            {exercise.prompt}
-          </p>
-        </div>
-
         {/* Exercise-specific content */}
         {exercise.type === 'analysis' && exercise.material && (
-          <div className="animate-fadeInUp group rounded-xl border-l-4 border-l-primary-500 border-r border-t border-b border-cream-300 bg-gradient-to-br from-white to-cream-50/50 p-4 shadow-md transition-all duration-300 hover:scale-[1.01] hover:shadow-lg sm:p-5">
-            <h4 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-700">
-              <svg
-                className="h-5 w-5 text-primary-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2.5}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              Material to Analyze
-            </h4>
-            <div className="whitespace-pre-wrap rounded-lg border border-cream-200 bg-gradient-to-br from-cream-50 to-white p-4 text-sm leading-relaxed text-neutral-900 shadow-inner">
-              {exercise.material}
+          <div className="animate-fadeInUp rounded-xl border-2 border-primary-500 bg-white p-6 sm:p-8">
+            {/* Exercise Prompt (Instructions) */}
+            <div className="mb-6">
+              <p className="whitespace-pre-wrap text-base leading-relaxed text-neutral-900 sm:text-lg">
+                <span className="font-semibold">Your Task: </span>
+                {exercise.prompt}
+              </p>
+            </div>
+
+            {/* Material to Analyze */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-neutral-700">
+                Material to Analyze
+              </h4>
+              <div className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-900">
+                {exercise.material}
+              </div>
             </div>
           </div>
         )}
 
         {exercise.type === 'comparative' && exercise.options && (
-          <div className="animate-fadeInUp group rounded-xl border-l-4 border-l-primary-500 border-r border-t border-b border-cream-300 bg-gradient-to-br from-white to-cream-50/50 p-4 shadow-md transition-all duration-300 hover:scale-[1.01] hover:shadow-lg sm:p-5">
-            <h4 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-700">
-              <svg
-                className="h-5 w-5 text-primary-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2.5}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
-              Options to Compare
-            </h4>
-            <ul className="space-y-3">
-              {exercise.options.map((option, idx) => (
-                <li
-                  key={idx}
-                  className={`animate-slideInRight flex items-start gap-3 rounded-lg border border-cream-200 bg-gradient-to-r from-cream-50 to-white p-3.5 shadow-sm transition-all hover:border-primary-300 hover:shadow-md stagger-${Math.min(idx + 1, 5)}`}
-                >
-                  <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-600 text-xs font-bold text-white shadow-md ring-2 ring-primary-200">
-                    {idx + 1}
-                  </span>
-                  <span className="text-sm font-medium leading-relaxed text-neutral-900">
-                    {option}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <div className="animate-fadeInUp rounded-xl border-2 border-primary-500 bg-white p-6 sm:p-8">
+            {/* Exercise Prompt (Instructions) */}
+            <div className="mb-6">
+              <p className="whitespace-pre-wrap text-base leading-relaxed text-neutral-900 sm:text-lg">
+                <span className="font-semibold">Your Task: </span>
+                {exercise.prompt}
+              </p>
+            </div>
+
+            {/* Options to Compare */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-neutral-700">
+                Options to Compare
+              </h4>
+              <ul className="space-y-3">
+                {exercise.options.map((option, idx) => (
+                  <li
+                    key={idx}
+                    className={`animate-slideInRight flex items-start gap-3 rounded-lg border border-cream-200 bg-cream-50 p-3.5 stagger-${Math.min(idx + 1, 5)}`}
+                  >
+                    <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-600 text-xs font-bold text-white shadow-md ring-2 ring-primary-200">
+                      {idx + 1}
+                    </span>
+                    <span className="text-sm font-medium leading-relaxed text-neutral-900">
+                      {option}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
 
         {exercise.type === 'framework' && (
-          <div className="space-y-4">
-            {exercise.scaffold && (
-              <div className="animate-fadeInUp group rounded-xl border-l-4 border-l-primary-500 border-r border-t border-b border-cream-300 bg-gradient-to-br from-white to-cream-50/50 p-4 shadow-md transition-all duration-300 hover:scale-[1.01] hover:shadow-lg sm:p-5">
-                <h4 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                  <svg
-                    className="h-5 w-5 text-primary-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                    />
-                  </svg>
-                  Framework Structure
-                </h4>
+          <div className="animate-fadeInUp rounded-xl border-2 border-primary-500 bg-white p-6 sm:p-8">
+            {/* Exercise Prompt (Instructions) */}
+            <div className="mb-6">
+              <p className="whitespace-pre-wrap text-base leading-relaxed text-neutral-900 sm:text-lg">
+                <span className="font-semibold">Your Task: </span>
+                {exercise.prompt}
+              </p>
+            </div>
+
+            {/* Task Materials Section */}
+            <div className="space-y-5">
+              {exercise.scaffold && (
                 <div className="space-y-3">
-                  {Object.entries(exercise.scaffold).map(([key, value], idx) => (
-                    <div
-                      key={key}
-                      className={`animate-slideInRight group/item relative overflow-hidden rounded-lg border-l-4 border-primary-500 bg-gradient-to-r from-cream-50 via-white to-cream-50/50 p-4 shadow-sm transition-all hover:border-primary-600 hover:shadow-md stagger-${Math.min(idx + 1, 5)}`}
-                    >
-                      <div className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-primary-50 text-xs font-bold text-primary-700 opacity-60 transition-opacity group-hover/item:opacity-100">
-                        {idx + 1}
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-neutral-700">
+                    Framework Structure
+                  </h4>
+                  <div className="space-y-3">
+                    {Object.entries(exercise.scaffold).map(([key, value], idx) => (
+                      <div
+                        key={key}
+                        className={`animate-slideInRight group/item relative overflow-hidden rounded-lg border-l-4 border-primary-500 bg-cream-50 p-4 stagger-${Math.min(idx + 1, 5)}`}
+                      >
+                        <div className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-primary-50 text-xs font-bold text-primary-700">
+                          {idx + 1}
+                        </div>
+                        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary-800">
+                          <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                              fillRule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          {key}
+                        </div>
+                        <div className="pr-10 text-sm leading-relaxed text-neutral-800">
+                          {value}
+                        </div>
                       </div>
-                      <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary-800">
-                        <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        {key}
-                      </div>
-                      <div className="pr-10 text-sm leading-relaxed text-neutral-800">{value}</div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-            {exercise.material && (
-              <div className="animate-fadeInUp stagger-2 group rounded-xl border-l-4 border-l-primary-500 border-r border-t border-b border-cream-300 bg-gradient-to-br from-white to-cream-50/50 p-4 shadow-md transition-all duration-300 hover:scale-[1.01] hover:shadow-lg sm:p-5">
-                <h4 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                  <svg
-                    className="h-5 w-5 text-primary-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                    />
-                  </svg>
-                  Reference Material
-                </h4>
-                <div className="whitespace-pre-wrap rounded-lg border border-cream-200 bg-gradient-to-br from-cream-50 to-white p-4 text-sm leading-relaxed text-neutral-900 shadow-inner">
-                  {exercise.material}
+              )}
+              {exercise.material && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-neutral-700">
+                    Reference Material
+                  </h4>
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-900">
+                    {exercise.material}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -638,34 +614,66 @@ export default function ModulePage() {
             </div>
           </nav>
 
-          {/* Back Button - Above both panels */}
+          {/* Header with Back Button and Badges */}
           <div className="bg-dark border-b border-neutral-700 px-4 py-3 sm:px-6">
-            <button
-              onClick={() => {
-                // Set flag to scroll to bottom when returning to chat
-                sessionStorage.setItem('scrollToBottom', 'true')
-                router.push('/')
-              }}
-              className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-3 py-2 text-neutral-400 transition-all hover:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-neutral-800"
-              aria-label="Back to chat"
-            >
-              <span className="absolute inset-0 scale-0 rounded-xl bg-gradient-to-r from-neutral-700 to-neutral-600 opacity-0 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100"></span>
-              <svg
-                className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
+            <div className="flex items-center justify-between">
+              {/* Back Button */}
+              <button
+                onClick={() => {
+                  // Set flag to scroll to bottom when returning to chat
+                  sessionStorage.setItem('scrollToBottom', 'true')
+                  router.push('/')
+                }}
+                className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-3 py-2 text-neutral-400 transition-all hover:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-neutral-800"
+                aria-label="Back to chat"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2.5}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              <span className="relative z-10 text-sm font-medium">Chat</span>
-            </button>
+                <span className="absolute inset-0 scale-0 rounded-xl bg-gradient-to-r from-neutral-700 to-neutral-600 opacity-0 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100"></span>
+                <svg
+                  className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                <span className="relative z-10 text-sm font-medium">Chat</span>
+              </button>
+
+              {/* Topic and Level Badges */}
+              {module && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-primary-300 bg-gradient-to-r from-primary-100 to-primary-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-primary-800">
+                    <span className="flex items-center gap-1.5">
+                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      {module.skill_level.charAt(0).toUpperCase() + module.skill_level.slice(1)}
+                    </span>
+                  </span>
+                  {module.topic && (
+                    <span className="rounded-full border border-neutral-600 bg-neutral-700 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-neutral-200">
+                      <span className="flex items-center gap-1.5">
+                        <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path
+                            fillRule="evenodd"
+                            d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z"
+                            clipRule="evenodd"
+                          />
+                          <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
+                        </svg>
+                        {module.topic.replace(/_/g, ' ')}
+                      </span>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Split-screen layout */}
@@ -680,48 +688,18 @@ export default function ModulePage() {
               {module && currentExercise && (
                 <div className="animate-fadeInUp mx-auto flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-3xl border-2 border-cream-200/80 bg-cream-50 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.35),0_15px_30px_-10px_rgba(0,0,0,0.25),0_0_0_1px_rgba(217,119,87,0.05)] transition-shadow duration-300 hover:shadow-[0_30px_80px_-15px_rgba(0,0,0,0.4),0_20px_40px_-10px_rgba(0,0,0,0.3),0_0_0_1px_rgba(217,119,87,0.1)]">
                   {/* Card Header */}
-                  <div className="frosted-glass flex-shrink-0 space-y-4 border-b border-cream-200/60 bg-gradient-to-b from-cream-100/70 via-cream-50/40 to-transparent p-5 shadow-sm sm:space-y-5 sm:p-6 lg:p-8">
-                    {/* Exercise Number and Name */}
-                    <div className="space-y-2 text-center">
-                      <p className="text-base font-semibold text-neutral-600 sm:text-lg lg:text-xl">
-                        Exercise {currentExerciseIndex + 1}
-                      </p>
+                  <div className="frosted-glass flex-shrink-0 bg-gradient-to-b from-cream-100/70 via-cream-50/40 to-transparent px-5 pt-5 pb-3 sm:px-6 sm:pt-6 sm:pb-4 lg:px-8 lg:pt-8 lg:pb-4">
+                    {/* Exercise Name */}
+                    <div className="text-center">
                       <h2 className="text-xl font-bold text-neutral-900 sm:text-2xl lg:text-3xl">
-                        {currentExercise.name}
+                        {currentExercise.name || `Exercise ${currentExerciseIndex + 1}`}
                       </h2>
-                    </div>
-
-                    {/* Topic and Level Badges */}
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                      <span className="animate-scaleIn rounded-full border border-primary-300 bg-gradient-to-r from-primary-100 to-primary-50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-800 shadow-md">
-                        <span className="flex items-center gap-1.5">
-                          <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                          {module.skill_level.charAt(0).toUpperCase() + module.skill_level.slice(1)}
-                        </span>
-                      </span>
-                      {module.topic && (
-                        <span className="animate-scaleIn stagger-1 rounded-full border border-neutral-300 bg-gradient-to-r from-neutral-100 to-neutral-50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-neutral-700 shadow-md">
-                          <span className="flex items-center gap-1.5">
-                            <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-                              <path
-                                fillRule="evenodd"
-                                d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z"
-                                clipRule="evenodd"
-                              />
-                              <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
-                            </svg>
-                            {module.topic.replace(/_/g, ' ')}
-                          </span>
-                        </span>
-                      )}
                     </div>
                   </div>
 
                   {/* Scrollable Content */}
                   <div className="smooth-scroll relative flex-1 overflow-y-auto">
-                    <div className="space-y-4 p-5 sm:space-y-5 sm:p-6 lg:p-8">
+                    <div className="space-y-4 px-5 pt-3 pb-5 sm:space-y-5 sm:px-6 sm:pt-4 sm:pb-6 lg:px-8 lg:pt-4 lg:pb-8">
                       {/* Current Exercise */}
                       <div className="space-y-4">{renderExercise(currentExercise)}</div>
 
