@@ -29,6 +29,33 @@ interface Module {
   exercises?: Exercise[]
 }
 
+interface ModuleProgress {
+  completedExercises: number[]
+  exerciseResponses: Record<number, string>
+}
+
+type ModuleStatus = 'Not Started' | 'In Progress' | 'Completed'
+
+const getModuleStatus = (moduleId: string, totalExercises: number): ModuleStatus => {
+  if (typeof window === 'undefined' || totalExercises === 0) return 'Not Started'
+
+  const storageKey = `module_${moduleId}_progress`
+  const saved = localStorage.getItem(storageKey)
+
+  if (!saved) return 'Not Started'
+
+  try {
+    const progress: ModuleProgress = JSON.parse(saved)
+    const completedCount = progress.completedExercises?.length || 0
+
+    if (completedCount === 0) return 'Not Started'
+    if (completedCount >= totalExercises) return 'Completed'
+    return 'In Progress'
+  } catch {
+    return 'Not Started'
+  }
+}
+
 const getInitialMessages = (): Message[] => {
   if (typeof window === 'undefined') {
     return [
@@ -77,6 +104,7 @@ export default function ModulePage() {
   const [inputMessage, setInputMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [modules, setModules] = useState<Record<string, Module>>(getInitialModules)
+  const [moduleStatuses, setModuleStatuses] = useState<Record<string, ModuleStatus>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -90,6 +118,32 @@ export default function ModulePage() {
     sessionStorage.setItem('chatModules', JSON.stringify(modules))
   }, [modules])
 
+  // Calculate module statuses whenever modules change
+  useEffect(() => {
+    const statuses: Record<string, ModuleStatus> = {}
+    Object.entries(modules).forEach(([id, module]) => {
+      statuses[id] = getModuleStatus(id, module.exercises?.length || 0)
+    })
+    setModuleStatuses(statuses)
+  }, [modules])
+
+  // Listen for storage changes to update statuses when progress is made in module page
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key?.startsWith('module_') && e.key?.endsWith('_progress')) {
+        // Re-calculate all module statuses
+        const statuses: Record<string, ModuleStatus> = {}
+        Object.entries(modules).forEach(([id, module]) => {
+          statuses[id] = getModuleStatus(id, module.exercises?.length || 0)
+        })
+        setModuleStatuses(statuses)
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [modules])
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -97,6 +151,18 @@ export default function ModulePage() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Check if we should scroll to bottom on mount (coming from module page)
+  useEffect(() => {
+    const shouldScroll = sessionStorage.getItem('scrollToBottom')
+    if (shouldScroll === 'true') {
+      sessionStorage.removeItem('scrollToBottom')
+      // Use setTimeout to ensure DOM is ready
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    }
+  }, [])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -263,10 +329,25 @@ export default function ModulePage() {
                                     />
                                   </svg>
                                 </div>
-                                <div className="min-w-0">
-                                  <h3 className="text-sm font-semibold text-neutral-100">
-                                    {modules[message.moduleId].topic}
-                                  </h3>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="text-sm font-semibold text-neutral-100">
+                                      {modules[message.moduleId].topic}
+                                    </h3>
+                                    {moduleStatuses[message.moduleId] && (
+                                      <span
+                                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                          moduleStatuses[message.moduleId] === 'Completed'
+                                            ? 'bg-green-500/20 text-green-400'
+                                            : moduleStatuses[message.moduleId] === 'In Progress'
+                                              ? 'bg-yellow-500/20 text-yellow-400'
+                                              : 'bg-neutral-600/50 text-neutral-400'
+                                        }`}
+                                      >
+                                        {moduleStatuses[message.moduleId]}
+                                      </span>
+                                    )}
+                                  </div>
                                   <p className="text-xs text-neutral-400">
                                     {modules[message.moduleId].skill_level.charAt(0).toUpperCase() +
                                       modules[message.moduleId].skill_level.slice(1)}{' '}

@@ -7,7 +7,7 @@ import type { SubmitResponse } from '@/types/session'
 interface AnswerSubmissionProps {
   sessionId: string
   hintsUsed: number
-  onSubmitSuccess: (response: SubmitResponse) => void
+  onSubmitSuccess: (response: SubmitResponse, submittedAnswer: string) => void
   initialAnswer?: string
   renderSubmitButton?: (props: {
     onClick: () => void
@@ -50,9 +50,12 @@ export default function AnswerSubmission({
     // Calculate time spent in seconds
     const timeSpentSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000)
 
+    // Store the answer before clearing it
+    const submittedAnswer = answer.trim()
+
     try {
       const response = await submitAnswer(sessionId, {
-        answer_text: answer.trim(),
+        answer_text: submittedAnswer,
         time_spent_seconds: timeSpentSeconds,
         hints_used: hintsUsed,
       })
@@ -66,7 +69,7 @@ export default function AnswerSubmission({
       // Reset timer for next attempt
       startTimeRef.current = Date.now()
 
-      onSubmitSuccess(response)
+      onSubmitSuccess(response, submittedAnswer)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to submit answer'
       setError(errorMessage)
