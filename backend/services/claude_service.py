@@ -13,9 +13,46 @@ from services.mock_data import (
     extract_mock_topic_and_level,
     generate_mock_module,
 )
+from utils.retry_handler import with_retry
 
 # Initialize Anthropic client
 client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+
+@with_retry(max_retries=2, timeout=30.0)
+def _call_claude_for_extraction(system_prompt: str, user_prompt: str):
+    """Helper function to call Claude API for topic extraction with retry logic"""
+    return client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=500,
+        temperature=0.3,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+
+
+@with_retry(max_retries=2, timeout=90.0)
+def _call_claude_for_generation(system_prompt: str, user_prompt: str):
+    """Helper function to call Claude API for module generation with retry logic"""
+    return client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=8000,
+        temperature=0.7,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+
+
+@with_retry(max_retries=2, timeout=60.0)
+def _call_claude_for_evaluation(system_prompt: str, user_prompt: str):
+    """Helper function to call Claude API for answer evaluation with retry logic"""
+    return client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1000,
+        temperature=0.5,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
 
 
 def extract_topic_and_level(message: str) -> Dict[str, str]:
@@ -57,13 +94,7 @@ Return ONLY valid JSON matching this schema - no markdown, no code blocks:
 Return ONLY the JSON object."""
 
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=500,
-            temperature=0.3,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
-        )
+        response = _call_claude_for_extraction(system_prompt, user_prompt)
 
         # Extract the text content
         response_text = response.content[0].text.strip()
@@ -214,13 +245,7 @@ Ensure the topic is appropriate for {skill_level} level and exercises build on e
 Return ONLY the JSON object, no markdown formatting or code blocks."""
 
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=8000,
-            temperature=0.7,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
-        )
+        response = _call_claude_for_generation(system_prompt, user_prompt)
 
         # Extract the text content from the response
         response_text = response.content[0].text.strip()
@@ -330,13 +355,7 @@ Evaluate this answer against the validation criteria. Consider that using hints 
 Return ONLY the JSON evaluation object."""
 
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1000,
-            temperature=0.5,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
-        )
+        response = _call_claude_for_evaluation(system_prompt, user_prompt)
 
         # Extract the text content
         response_text = response.content[0].text.strip()
