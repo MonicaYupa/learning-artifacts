@@ -22,9 +22,10 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str
     SUPABASE_SERVICE_ROLE_KEY: str
     DATABASE_URL: str
+    JWT_SECRET: str  # JWT secret for HS256 token verification
 
     # JWT Configuration (using JWT signing keys)
-    JWT_ALGORITHM: str = "RS256"  # Supabase now uses RS256 with signing keys
+    JWT_ALGORITHM: str = "ES256"  # Supabase uses ES256 with signing keys
 
     # Claude API Configuration
     ANTHROPIC_API_KEY: str

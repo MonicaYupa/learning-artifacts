@@ -156,8 +156,8 @@ class SessionResponse(BaseModel):
 class AnswerSubmitRequest(BaseModel):
     """Request to submit an answer"""
 
-    answer_text: str = Field(..., min_length=10)
-    time_spent_seconds: int = Field(..., ge=0)
+    answer_text: str = Field(..., min_length=10, max_length=10000)
+    time_spent_seconds: int = Field(..., ge=0, le=86400)  # Max 24 hours
     hints_used: int = Field(..., ge=0, le=3)
 
 

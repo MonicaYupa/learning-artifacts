@@ -7,7 +7,8 @@ import json
 from typing import List
 
 from config.database import execute_query
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from middleware.auth import get_current_user, get_current_user_id
 from models.schemas import (
     ErrorResponse,
     ModuleGenerateRequest,
@@ -23,12 +24,15 @@ router = APIRouter()
     "/modules",
     response_model=List[ModuleListItem],
     status_code=status.HTTP_200_OK,
-    summary="List All Modules",
-    description="Retrieve a list of all available learning modules without full exercise details",
+    summary="List User's Modules",
+    description="Retrieve a list of modules owned by the authenticated user",
 )
-async def list_modules():
+async def list_modules(user_id: str = Depends(get_current_user_id)):
     """
-    List all modules with summary information
+    List all modules for the authenticated user
+
+    Args:
+        user_id: Current user's ID (from JWT token)
 
     Returns:
         List of module summaries (without full exercise details)
@@ -47,10 +51,11 @@ async def list_modules():
                 ) as estimated_minutes,
                 created_at
             FROM modules
+            WHERE user_id = %s
             ORDER BY created_at DESC
         """
 
-        modules = execute_query(query)
+        modules = execute_query(query, (user_id,))
         return modules if modules else []
 
     except Exception as e:
@@ -65,20 +70,28 @@ async def list_modules():
     response_model=ModuleResponse,
     status_code=status.HTTP_200_OK,
     summary="Get Module by ID",
-    description="Retrieve a specific module with full exercise details",
-    responses={404: {"model": ErrorResponse, "description": "Module not found"}},
+    description="Retrieve a specific module with full exercise details (user must own the module)",
+    responses={
+        404: {"model": ErrorResponse, "description": "Module not found"},
+        403: {
+            "model": ErrorResponse,
+            "description": "Access denied - module belongs to another user",
+        },
+    },
 )
-async def get_module(module_id: str):
+async def get_module(module_id: str, user_id: str = Depends(get_current_user_id)):
     """
     Get a specific module by ID with full exercise details
 
     Args:
         module_id: UUID of the module to retrieve
+        user_id: Current user's ID (from JWT token)
 
     Returns:
         Module with full exercise details
 
     Raises:
+        403: User doesn't own this module
         404: Module not found
     """
     try:
@@ -89,7 +102,8 @@ async def get_module(module_id: str):
                 domain,
                 skill_level,
                 exercises,
-                created_at
+                created_at,
+                user_id
             FROM modules
             WHERE id = %s
         """
@@ -101,6 +115,16 @@ async def get_module(module_id: str):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Module with id {module_id} not found",
             )
+
+        # Verify ownership
+        if module["user_id"] != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied - you don't have permission to view this module",
+            )
+
+        # Remove user_id from response (not in ModuleResponse schema)
+        module.pop("user_id", None)
 
         return module
 
@@ -124,12 +148,16 @@ async def get_module(module_id: str):
         500: {"model": ErrorResponse, "description": "Module generation failed"},
     },
 )
-async def generate_new_module(request: ModuleGenerateRequest):
+async def generate_new_module(
+    request: ModuleGenerateRequest,
+    user_id: str = Depends(get_current_user_id),
+):
     """
     Generate a new learning module using Claude API
 
     Args:
         request: Module generation parameters (message OR topic+skill_level, exercise_count)
+        user_id: Current user's ID (from JWT token)
 
     Returns:
         Generated module with full exercise details
@@ -160,10 +188,10 @@ async def generate_new_module(request: ModuleGenerateRequest):
             exercise_count=request.exercise_count,
         )
 
-        # Store module in database
+        # Store module in database with user_id
         query = """
-            INSERT INTO modules (title, domain, skill_level, exercises)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO modules (user_id, title, domain, skill_level, exercises)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING id, title, domain, skill_level, exercises, created_at
         """
 
@@ -173,6 +201,7 @@ async def generate_new_module(request: ModuleGenerateRequest):
         created_module = execute_query(
             query,
             (
+                user_id,
                 module_data["title"],
                 module_data["domain"],
                 module_data["skill_level"],
@@ -186,6 +215,8 @@ async def generate_new_module(request: ModuleGenerateRequest):
 
         return created_module
 
+    except HTTPException:
+        raise
     except Exception as e:
         error_message = str(e)
 

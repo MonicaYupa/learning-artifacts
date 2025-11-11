@@ -189,6 +189,15 @@ export default function ModulePage() {
         return
       }
 
+      // Debug: Check token algorithm
+      try {
+        const tokenParts = session.access_token.split('.')
+        const header = JSON.parse(atob(tokenParts[0]))
+        console.log('[DEBUG] Token algorithm:', header.alg, 'kid:', header.kid)
+      } catch (e) {
+        console.error('Failed to decode token header:', e)
+      }
+
       // Call backend API to generate module based on user message
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/modules/generate`, {
         method: 'POST',

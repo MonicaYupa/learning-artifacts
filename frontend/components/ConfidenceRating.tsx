@@ -19,8 +19,9 @@ export default function ConfidenceRating({ sessionId, onRatingSubmitted }: Confi
   // Handle keyboard input (1-5 keys)
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      const num = parseInt(e.key)
-      if (num >= 1 && num <= 5) {
+      const num = parseInt(e.key, 10)
+      // Validate: must be a number between 1-5 (not NaN, not 0, not 6+)
+      if (!isNaN(num) && num >= 1 && num <= 5) {
         setSelectedRating(num)
         onRatingSubmitted?.(num)
       }

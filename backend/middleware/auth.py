@@ -3,44 +3,53 @@ JWT Authentication Middleware
 Verifies Supabase JWT tokens using JWT signing keys (RS256)
 """
 
-import json
 from typing import Optional
 
 import httpx
+import time
 from config.database import get_or_create_user
 from config.settings import settings
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwk, jwt
+from jose import JWTError, jwt
 from jose.utils import base64url_decode
 
 # HTTP Bearer token scheme
 security = HTTPBearer()
 
-# Cache for JWKS (JSON Web Key Set)
+# Cache for JWKS (JSON Web Key Set) with TTL
 _jwks_cache: Optional[dict] = None
+_jwks_cache_timestamp: Optional[float] = None
+JWKS_CACHE_TTL_SECONDS = 86400  # 24 hours
 
 
 async def get_supabase_jwks() -> dict:
     """
     Fetch Supabase JWKS (JSON Web Key Set) from the well-known endpoint
-    Caches the result to avoid repeated requests
+    Caches the result for 24 hours to avoid repeated requests
+
+    Cache automatically expires after TTL to pick up key rotations
 
     Returns:
         JWKS dictionary containing public keys
     """
-    global _jwks_cache
+    global _jwks_cache, _jwks_cache_timestamp
 
-    if _jwks_cache is not None:
-        return _jwks_cache
+    current_time = time.time()
 
-    jwks_url = f"{settings.SUPABASE_URL}/.well-known/jwks.json"
+    # Check if cache exists and is still valid
+    if _jwks_cache is not None and _jwks_cache_timestamp is not None:
+        if current_time - _jwks_cache_timestamp < JWKS_CACHE_TTL_SECONDS:
+            return _jwks_cache
+
+    jwks_url = f"{settings.SUPABASE_URL}/auth/v1/.well-known/jwks.json"
 
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(jwks_url, timeout=10.0)
             response.raise_for_status()
             _jwks_cache = response.json()
+            _jwks_cache_timestamp = current_time
             return _jwks_cache
     except Exception as e:
         raise HTTPException(
@@ -51,7 +60,9 @@ async def get_supabase_jwks() -> dict:
 
 async def decode_token(token: str) -> dict:
     """
-    Decode and verify JWT token using Supabase's public key from JWKS
+    Decode and verify JWT token using Supabase's public key from JWKS or JWT secret
+
+    Supports both legacy HS256 tokens and modern asymmetric tokens (ES256/RS256)
 
     Args:
         token: JWT token string
@@ -63,9 +74,26 @@ async def decode_token(token: str) -> dict:
         HTTPException: If token is invalid or expired
     """
     try:
-        # Get the unverified header to find the key ID (kid)
+        # Get the unverified header to determine the algorithm
         unverified_header = jwt.get_unverified_header(token)
+        alg = unverified_header.get("alg")
 
+        # Handle HS256 (legacy symmetric key tokens)
+        if alg == "HS256":
+            # For HS256, use the JWT secret from Supabase settings
+            payload = jwt.decode(
+                token,
+                settings.JWT_SECRET,
+                algorithms=["HS256"],
+                options={
+                    "verify_signature": True,
+                    "verify_exp": True,
+                    "verify_aud": False,
+                },
+            )
+            return payload
+
+        # Handle ES256/RS256 (modern asymmetric key tokens via JWKS)
         # Fetch JWKS from Supabase
         jwks = await get_supabase_jwks()
 
@@ -96,7 +124,7 @@ async def decode_token(token: str) -> dict:
         payload = jwt.decode(
             token,
             key,
-            algorithms=[settings.JWT_ALGORITHM],
+            algorithms=["ES256", "RS256"],
             options={
                 "verify_signature": True,
                 "verify_exp": True,

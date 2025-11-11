@@ -27,12 +27,10 @@ interface CompletionScreenProps {
  * Displays celebration, summary, confidence rating, and navigation after module completion
  */
 export default function CompletionScreen({
-  moduleId,
-  moduleTitle,
+  // moduleId, moduleTitle, exercises - reserved for future features
   moduleTopic,
   moduleDomain,
   sessionId,
-  exercises,
   isOpen,
   onClose,
 }: CompletionScreenProps) {

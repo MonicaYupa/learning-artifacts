@@ -7,7 +7,8 @@ import json
 from datetime import datetime
 
 from config.database import execute_query
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from middleware.auth import get_current_user_id
 from models.schemas import (
     AnswerSubmitRequest,
     AnswerSubmitResponse,
@@ -22,32 +23,79 @@ from services.claude_service import evaluate_answer
 
 router = APIRouter()
 
+# Constants for session limits
+MAX_ATTEMPTS_PER_EXERCISE = 3
+MAX_HINTS_PER_EXERCISE = 3
+
+
+async def verify_session_ownership(session_id: str, user_id: str) -> dict:
+    """
+    Helper function to verify session exists and user owns it
+
+    Args:
+        session_id: UUID of the session
+        user_id: Current user's ID
+
+    Returns:
+        Session data if authorized
+
+    Raises:
+        HTTPException: If session not found or user doesn't own it
+    """
+    query = "SELECT * FROM sessions WHERE id = %s"
+    session = execute_query(query, (session_id,), fetch_one=True)
+
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session with id {session_id} not found",
+        )
+
+    if session["user_id"] != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied - you don't have permission to access this session",
+        )
+
+    return session
+
 
 @router.post(
     "/sessions",
     response_model=SessionResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create New Session",
-    description="Create a new learning session for a specific module",
-    responses={404: {"model": ErrorResponse, "description": "Module not found"}},
+    description="Create a new learning session for a specific module owned by the user",
+    responses={
+        404: {"model": ErrorResponse, "description": "Module not found"},
+        403: {
+            "model": ErrorResponse,
+            "description": "Access denied - module belongs to another user",
+        },
+    },
 )
-async def create_session(request: SessionCreateRequest):
+async def create_session(
+    request: SessionCreateRequest,
+    user_id: str = Depends(get_current_user_id),
+):
     """
     Create a new learning session for a module
 
     Args:
         request: Session creation parameters (module_id)
+        user_id: Current user's ID (from JWT token)
 
     Returns:
         Created session with initial state
 
     Raises:
+        403: User doesn't own the module
         404: Module not found
         500: Session creation failed
     """
     try:
-        # Verify module exists
-        module_query = "SELECT id FROM modules WHERE id = %s"
+        # Verify module exists and user owns it
+        module_query = "SELECT id, user_id FROM modules WHERE id = %s"
         module = execute_query(module_query, (request.module_id,), fetch_one=True)
 
         if not module:
@@ -56,18 +104,12 @@ async def create_session(request: SessionCreateRequest):
                 detail=f"Module with id {request.module_id} not found",
             )
 
-        # Get or create default test user (will be replaced with auth in Phase 4)
-        user_query = "SELECT id FROM users LIMIT 1"
-        user = execute_query(user_query, fetch_one=True)
-
-        if not user:
-            # Create default test user if none exists
-            user = execute_query(
-                "INSERT INTO users (email) VALUES ('test@example.com') RETURNING id",
-                fetch_one=True,
+        # Verify ownership
+        if module["user_id"] != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied - you don't have permission to create a session for this module",
             )
-
-        user_id = user["id"]
 
         # Create session
         create_query = """
@@ -100,20 +142,28 @@ async def create_session(request: SessionCreateRequest):
     response_model=SessionResponse,
     status_code=status.HTTP_200_OK,
     summary="Get Session by ID",
-    description="Retrieve a specific session with full attempt history",
-    responses={404: {"model": ErrorResponse, "description": "Session not found"}},
+    description="Retrieve a specific session with full attempt history (user must own the session)",
+    responses={
+        404: {"model": ErrorResponse, "description": "Session not found"},
+        403: {
+            "model": ErrorResponse,
+            "description": "Access denied - session belongs to another user",
+        },
+    },
 )
-async def get_session(session_id: str):
+async def get_session(session_id: str, user_id: str = Depends(get_current_user_id)):
     """
     Get a specific session by ID with full attempt history
 
     Args:
         session_id: UUID of the session to retrieve
+        user_id: Current user's ID (from JWT token)
 
     Returns:
         Session with full attempt details
 
     Raises:
+        403: User doesn't own this session
         404: Session not found
     """
     try:
@@ -140,6 +190,13 @@ async def get_session(session_id: str):
                 detail=f"Session with id {session_id} not found",
             )
 
+        # Verify ownership
+        if session["user_id"] != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied - you don't have permission to view this session",
+            )
+
         return session
 
     except HTTPException:
@@ -157,24 +214,39 @@ async def get_session(session_id: str):
     status_code=status.HTTP_200_OK,
     summary="Update Session",
     description="Update session state (current exercise, status, confidence rating)",
-    responses={404: {"model": ErrorResponse, "description": "Session not found"}},
+    responses={
+        404: {"model": ErrorResponse, "description": "Session not found"},
+        403: {
+            "model": ErrorResponse,
+            "description": "Access denied - session belongs to another user",
+        },
+    },
 )
-async def update_session(session_id: str, request: SessionUpdateRequest):
+async def update_session(
+    session_id: str,
+    request: SessionUpdateRequest,
+    user_id: str = Depends(get_current_user_id),
+):
     """
     Update session state
 
     Args:
         session_id: UUID of the session to update
         request: Session update parameters
+        user_id: Current user's ID (from JWT token)
 
     Returns:
         Updated session
 
     Raises:
+        403: User doesn't own this session
         404: Session not found
         400: Invalid update request
     """
     try:
+        # Verify ownership
+        await verify_session_ownership(session_id, user_id)
+
         # Build dynamic update query based on provided fields
         update_fields = []
         params = []
@@ -239,26 +311,39 @@ async def update_session(session_id: str, request: SessionUpdateRequest):
     description="Submit an answer for evaluation and receive feedback",
     responses={
         404: {"model": ErrorResponse, "description": "Session not found"},
+        403: {
+            "model": ErrorResponse,
+            "description": "Access denied - session belongs to another user",
+        },
         429: {"model": ErrorResponse, "description": "Claude API rate limit exceeded"},
     },
 )
-async def submit_answer(session_id: str, request: AnswerSubmitRequest):
+async def submit_answer(
+    session_id: str,
+    request: AnswerSubmitRequest,
+    user_id: str = Depends(get_current_user_id),
+):
     """
     Submit an answer for evaluation
 
     Args:
         session_id: UUID of the session
         request: Answer submission with text, time spent, and hints used
+        user_id: Current user's ID (from JWT token)
 
     Returns:
         Evaluation result with feedback and advancement decision
 
     Raises:
+        403: User doesn't own this session
         404: Session not found
         429: Rate limit exceeded
         500: Evaluation failed
     """
     try:
+        # Verify ownership first
+        await verify_session_ownership(session_id, user_id)
+
         # Get session and current exercise
         session_query = """
             SELECT s.id, s.current_exercise_index, s.attempts, s.status,
@@ -301,11 +386,11 @@ async def submit_answer(session_id: str, request: AnswerSubmitRequest):
         ]
         attempt_number = len(exercise_attempts) + 1
 
-        # Check if max attempts reached (3 attempts)
-        if attempt_number > 3:
+        # Check if max attempts reached
+        if attempt_number > MAX_ATTEMPTS_PER_EXERCISE:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Maximum attempts (3) reached for this exercise",
+                detail=f"Maximum attempts ({MAX_ATTEMPTS_PER_EXERCISE}) reached for this exercise",
             )
 
         # Evaluate answer using Claude
@@ -341,11 +426,13 @@ async def submit_answer(session_id: str, request: AnswerSubmitRequest):
 
         execute_query(update_query, (json.dumps(attempts), session_id))
 
-        # Check if hint is available (if user hasn't used all 3 hints)
-        hint_available = request.hints_used < 3
+        # Check if hint is available (if user hasn't used all hints)
+        hint_available = request.hints_used < MAX_HINTS_PER_EXERCISE
 
-        # Check if model answer is available (after 3 attempts or strong assessment)
-        model_answer_available = attempt_number >= 3 or evaluation["should_advance"]
+        # Check if model answer is available (after max attempts or strong assessment)
+        model_answer_available = (
+            attempt_number >= MAX_ATTEMPTS_PER_EXERCISE or evaluation["should_advance"]
+        )
 
         return {
             "assessment": evaluation["assessment"],
@@ -383,25 +470,38 @@ async def submit_answer(session_id: str, request: AnswerSubmitRequest):
     description="Request a progressive hint for the current exercise",
     responses={
         404: {"model": ErrorResponse, "description": "Session not found"},
+        403: {
+            "model": ErrorResponse,
+            "description": "Access denied - session belongs to another user",
+        },
         400: {"model": ErrorResponse, "description": "Invalid hint request"},
     },
 )
-async def request_hint(session_id: str, request: HintRequest):
+async def request_hint(
+    session_id: str,
+    request: HintRequest,
+    user_id: str = Depends(get_current_user_id),
+):
     """
     Request a progressive hint for the current exercise
 
     Args:
         session_id: UUID of the session
         request: Hint request (optional hint_level)
+        user_id: Current user's ID (from JWT token)
 
     Returns:
         Hint text with level information
 
     Raises:
+        403: User doesn't own this session
         404: Session not found
         400: Invalid hint request or no hints available
     """
     try:
+        # Verify ownership first
+        await verify_session_ownership(session_id, user_id)
+
         # Get session and current exercise
         session_query = """
             SELECT s.id, s.current_exercise_index, s.attempts, s.status,
@@ -446,10 +546,10 @@ async def request_hint(session_id: str, request: HintRequest):
         # Determine hint level
         if request.hint_level is not None:
             # Use requested level if valid
-            if not (1 <= request.hint_level <= 3):
+            if not (1 <= request.hint_level <= MAX_HINTS_PER_EXERCISE):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Hint level must be between 1 and 3",
+                    detail=f"Hint level must be between 1 and {MAX_HINTS_PER_EXERCISE}",
                 )
             hint_level = request.hint_level
         else:
@@ -460,7 +560,7 @@ async def request_hint(session_id: str, request: HintRequest):
 
             hint_level = max_hints_used + 1
 
-            if hint_level > 3:
+            if hint_level > MAX_HINTS_PER_EXERCISE:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="All hints have been used for this exercise",
@@ -468,14 +568,14 @@ async def request_hint(session_id: str, request: HintRequest):
 
         # Get hint text (hints are 0-indexed in array, but 1-indexed for user)
         hints = current_exercise.get("hints", [])
-        if len(hints) < 3:
+        if len(hints) < MAX_HINTS_PER_EXERCISE:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Exercise does not have sufficient hints",
             )
 
         hint_text = hints[hint_level - 1]
-        hints_remaining = 3 - hint_level
+        hints_remaining = MAX_HINTS_PER_EXERCISE - hint_level
 
         return {
             "hint_level": hint_level,

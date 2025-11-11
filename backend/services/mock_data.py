@@ -22,9 +22,15 @@ def extract_mock_topic_and_level(message: str) -> Dict[str, str]:
 
     # Extract skill level
     skill_level = "beginner"  # Default
-    if any(word in message_lower for word in ["advanced", "expert", "senior", "experienced"]):
+    if any(
+        word in message_lower
+        for word in ["advanced", "expert", "senior", "experienced"]
+    ):
         skill_level = "advanced"
-    elif any(word in message_lower for word in ["intermediate", "moderate", "some experience"]):
+    elif any(
+        word in message_lower
+        for word in ["intermediate", "moderate", "some experience"]
+    ):
         skill_level = "intermediate"
 
     # Extract topic using common patterns
@@ -72,10 +78,7 @@ def extract_mock_topic_and_level(message: str) -> Dict[str, str]:
     if len(topic) < 3 or topic in ["Learn", "About", "To"]:
         topic = "General Learning"
 
-    return {
-        "topic": topic,
-        "skill_level": skill_level
-    }
+    return {"topic": topic, "skill_level": skill_level}
 
 
 def generate_mock_module(topic: str, skill_level: str, exercise_count: int = 3) -> Dict:
