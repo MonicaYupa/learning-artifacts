@@ -74,8 +74,8 @@ class ExerciseSchema(BaseModel):
 class ModuleGenerateRequest(BaseModel):
     """Request to generate a new module"""
 
-    message: Optional[str] = Field(None, min_length=10, max_length=500)
-    topic: Optional[str] = Field(None, min_length=3, max_length=200)
+    message: Optional[str] = Field(None, min_length=1, max_length=500)
+    topic: Optional[str] = Field(None, min_length=1, max_length=200)
     skill_level: Optional[SkillLevel] = None
     exercise_count: int = Field(default=3, ge=1, le=5)
 

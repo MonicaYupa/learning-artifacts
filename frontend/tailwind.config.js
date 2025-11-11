@@ -15,11 +15,11 @@ module.exports = {
           200: '#fbd2c3',
           300: '#f7b099',
           400: '#f1875e',
-          500: '#cc785c', // Main Anthropic coral
-          600: '#b86547',
-          700: '#9a503a',
-          800: '#7d4332',
-          900: '#67392c',
+          500: '#d97757', // Anthropic Orange
+          600: '#cc785c',
+          700: '#b86547',
+          800: '#9a503a',
+          900: '#7d4332',
         },
         // Warm neutrals for backgrounds
         cream: {
@@ -27,8 +27,9 @@ module.exports = {
           100: '#faf8f5',
           200: '#f5f1eb',
           300: '#ebe5db',
-          400: '#d9cfbd',
-          500: '#c4b59f',
+          400: '#e8e6dc', // Anthropic Light Gray
+          500: '#d9cfbd',
+          600: '#c4b59f',
         },
       },
       fontFamily: {
