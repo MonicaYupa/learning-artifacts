@@ -10,7 +10,7 @@ import psycopg
 from anthropic import APITimeoutError, RateLimitError
 from config.database import execute_query
 from fastapi import APIRouter, Depends, HTTPException, status
-from middleware.auth import get_current_user, get_current_user_id
+from middleware.auth import get_current_user_id
 from models.schemas import (
     ErrorResponse,
     ModuleGenerateRequest,

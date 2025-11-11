@@ -160,12 +160,3 @@ def log_and_raise_rate_limit_error(
         detail=detail,
         headers=headers if headers else None,
     )
-
-
-# Common HTTP status codes for convenience
-HTTP_400_BAD_REQUEST = status.HTTP_400_BAD_REQUEST
-HTTP_401_UNAUTHORIZED = status.HTTP_401_UNAUTHORIZED
-HTTP_403_FORBIDDEN = status.HTTP_403_FORBIDDEN
-HTTP_404_NOT_FOUND = status.HTTP_404_NOT_FOUND
-HTTP_429_TOO_MANY_REQUESTS = status.HTTP_429_TOO_MANY_REQUESTS
-HTTP_500_INTERNAL_SERVER_ERROR = status.HTTP_500_INTERNAL_SERVER_ERROR
