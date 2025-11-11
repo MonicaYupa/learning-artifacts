@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     # API Configuration
     API_PREFIX: str = "/api"
 
+    # Sentry Configuration
+    SENTRY_DSN: str = ""  # Optional: Leave empty to disable Sentry
+    RELEASE_VERSION: str = "1.0.0"  # Optional: Release version for Sentry tracking
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):
@@ -48,7 +52,9 @@ class Settings(BaseSettings):
             return [origin.strip() for origin in v.split(",")]
         return v
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+    model_config = SettingsConfigDict(
+        env_file=".env", case_sensitive=True, extra="ignore"
+    )
 
 
 # Create settings instance

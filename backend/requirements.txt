@@ -26,6 +26,9 @@ python-dotenv==1.0.0
 # HTTP Client
 httpx==0.24.1
 
+# Error Tracking
+sentry-sdk[fastapi]==2.44.0
+
 # Testing
 pytest==7.4.4
 pytest-asyncio==0.23.3

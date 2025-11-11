@@ -6,10 +6,15 @@ FastAPI application for AI-powered learning modules
 from contextlib import asynccontextmanager
 
 from config.database import test_db_connection
+from config.sentry import init_sentry
 from config.settings import settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from middleware.sentry_context import SentryContextMiddleware
 from routers import health, modules, sessions
+
+# Initialize Sentry before creating the app
+init_sentry()
 
 
 # Lifespan context manager for startup/shutdown events
@@ -50,6 +55,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add Sentry context middleware
+app.add_middleware(SentryContextMiddleware)
 
 # Include routers
 app.include_router(health.router, tags=["health"])
