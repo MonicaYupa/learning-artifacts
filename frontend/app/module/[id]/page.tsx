@@ -146,14 +146,6 @@ export default function ModulePage() {
   useEffect(() => {
     const fetchModule = async () => {
       try {
-        // Demo mode - load sample exercises
-        if (params.id === 'demo') {
-          const { getMockModule } = await import('@/lib/mock-data/exercises')
-          setModule(getMockModule())
-          setLoading(false)
-          return
-        }
-
         const {
           data: { session },
         } = await supabase.auth.getSession()
