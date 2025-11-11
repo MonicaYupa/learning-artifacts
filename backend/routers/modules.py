@@ -6,7 +6,8 @@ Provides endpoints for module generation, retrieval, and storage
 import json
 from typing import List
 
-from anthropic import RateLimitError
+import psycopg
+from anthropic import APITimeoutError, RateLimitError
 from config.database import execute_query
 from fastapi import APIRouter, Depends, HTTPException, status
 from middleware.auth import get_current_user, get_current_user_id
@@ -65,6 +66,12 @@ async def list_modules(user_id: str = Depends(get_current_user_id)):
         modules = execute_query(query, (user_id,))
         return modules if modules else []
 
+    except psycopg.errors.QueryCanceled as e:
+        log_and_raise_http_error(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            public_message="The database query timed out. Please try again.",
+            error=e,
+        )
     except Exception as e:
         log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -138,6 +145,12 @@ async def get_module(module_id: str, user_id: str = Depends(get_current_user_id)
 
     except HTTPException:
         raise
+    except psycopg.errors.QueryCanceled as e:
+        log_and_raise_http_error(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            public_message="The database query timed out. Please try again.",
+            error=e,
+        )
     except Exception as e:
         log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -226,6 +239,18 @@ async def generate_new_module(
 
     except HTTPException:
         raise
+    except APITimeoutError as e:
+        log_and_raise_http_error(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            public_message="The Claude API request timed out. Please try again.",
+            error=e,
+        )
+    except psycopg.errors.QueryCanceled as e:
+        log_and_raise_http_error(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            public_message="The database query timed out. Please try again.",
+            error=e,
+        )
     except RateLimitError as e:
         log_and_raise_rate_limit_error(
             public_message="Claude API rate limit exceeded. Please try again later.",

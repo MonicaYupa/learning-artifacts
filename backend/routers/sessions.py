@@ -6,7 +6,8 @@ Provides endpoints for session management, answer submission, and hint requests
 import json
 from datetime import datetime
 
-from anthropic import RateLimitError
+import psycopg
+from anthropic import APITimeoutError, RateLimitError
 from config.database import execute_query
 from fastapi import APIRouter, Depends, HTTPException, status
 from middleware.auth import get_current_user_id
@@ -137,6 +138,12 @@ async def create_session(
 
     except HTTPException:
         raise
+    except psycopg.errors.QueryCanceled as e:
+        log_and_raise_http_error(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            public_message="The database query timed out. Please try again.",
+            error=e,
+        )
     except Exception as e:
         log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -209,6 +216,12 @@ async def get_session(session_id: str, user_id: str = Depends(get_current_user_i
 
     except HTTPException:
         raise
+    except psycopg.errors.QueryCanceled as e:
+        log_and_raise_http_error(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            public_message="The database query timed out. Please try again.",
+            error=e,
+        )
     except Exception as e:
         log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -339,6 +352,12 @@ async def update_session(
 
     except HTTPException:
         raise
+    except psycopg.errors.QueryCanceled as e:
+        log_and_raise_http_error(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            public_message="The database query timed out. Please try again.",
+            error=e,
+        )
     except Exception as e:
         log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -490,6 +509,18 @@ async def submit_answer(
 
     except HTTPException:
         raise
+    except APITimeoutError as e:
+        log_and_raise_http_error(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            public_message="The Claude API request timed out. Please try again.",
+            error=e,
+        )
+    except psycopg.errors.QueryCanceled as e:
+        log_and_raise_http_error(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            public_message="The database query timed out. Please try again.",
+            error=e,
+        )
     except RateLimitError as e:
         log_and_raise_rate_limit_error(
             public_message="Claude API rate limit exceeded. Please try again later.",
@@ -636,6 +667,12 @@ async def request_hint(
 
     except HTTPException:
         raise
+    except psycopg.errors.QueryCanceled as e:
+        log_and_raise_http_error(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            public_message="The database query timed out. Please try again.",
+            error=e,
+        )
     except Exception as e:
         log_and_raise_http_error(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

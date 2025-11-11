@@ -20,7 +20,9 @@ client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 
 @with_retry(max_retries=2, timeout=30.0)
-def _call_claude_for_extraction(system_prompt: str, user_prompt: str):
+def _call_claude_for_extraction(
+    system_prompt: str, user_prompt: str, timeout: float = 30.0
+):
     """Helper function to call Claude API for topic extraction with retry logic"""
     return client.messages.create(
         model="claude-sonnet-4-20250514",
@@ -28,11 +30,14 @@ def _call_claude_for_extraction(system_prompt: str, user_prompt: str):
         temperature=0.3,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
+        timeout=timeout,
     )
 
 
 @with_retry(max_retries=2, timeout=90.0)
-def _call_claude_for_generation(system_prompt: str, user_prompt: str):
+def _call_claude_for_generation(
+    system_prompt: str, user_prompt: str, timeout: float = 90.0
+):
     """Helper function to call Claude API for module generation with retry logic"""
     return client.messages.create(
         model="claude-sonnet-4-20250514",
@@ -40,11 +45,14 @@ def _call_claude_for_generation(system_prompt: str, user_prompt: str):
         temperature=0.7,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
+        timeout=timeout,
     )
 
 
 @with_retry(max_retries=2, timeout=60.0)
-def _call_claude_for_evaluation(system_prompt: str, user_prompt: str):
+def _call_claude_for_evaluation(
+    system_prompt: str, user_prompt: str, timeout: float = 60.0
+):
     """Helper function to call Claude API for answer evaluation with retry logic"""
     return client.messages.create(
         model="claude-sonnet-4-20250514",
@@ -52,6 +60,7 @@ def _call_claude_for_evaluation(system_prompt: str, user_prompt: str):
         temperature=0.5,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
+        timeout=timeout,
     )
 
 

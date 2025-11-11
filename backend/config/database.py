@@ -59,7 +59,12 @@ def get_db_connection():
             conn.close()
 
 
-def execute_query(query: str, params: Optional[tuple] = None, fetch_one: bool = False):
+def execute_query(
+    query: str,
+    params: Optional[tuple] = None,
+    fetch_one: bool = False,
+    timeout_ms: int = 30000,
+):
     """
     Execute a SQL query and return results
 
@@ -67,12 +72,22 @@ def execute_query(query: str, params: Optional[tuple] = None, fetch_one: bool = 
         query: SQL query string
         params: Query parameters (optional)
         fetch_one: If True, fetch only one result; otherwise fetch all
+        timeout_ms: Query timeout in milliseconds (default: 30000ms = 30s)
 
     Returns:
         Query results as dictionary or list of dictionaries (with UUIDs converted to strings)
+
+    Raises:
+        ValueError: If timeout_ms is not a positive integer
     """
+    # Validate timeout_ms to prevent SQL injection
+    if not isinstance(timeout_ms, int) or timeout_ms <= 0:
+        raise ValueError("timeout_ms must be a positive integer")
+
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
+            # Set statement timeout for this query (safe after validation)
+            cursor.execute(f"SET LOCAL statement_timeout = {timeout_ms}")
             cursor.execute(query, params)
 
             # For INSERT/UPDATE/DELETE that return data
