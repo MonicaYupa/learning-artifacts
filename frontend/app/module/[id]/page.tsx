@@ -304,7 +304,7 @@ export default function ModulePage() {
           <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
               <button
-                onClick={() => router.push('/module')}
+                onClick={() => router.back()}
                 className="flex items-center space-x-1.5 py-2 text-primary-500 transition-colors hover:text-primary-600 active:text-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 sm:space-x-2"
               >
                 <svg

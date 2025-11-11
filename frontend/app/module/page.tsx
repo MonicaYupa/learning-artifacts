@@ -8,6 +8,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 interface Message {
   role: 'assistant' | 'user'
   content: string
+  moduleId?: string // Link message to a module
 }
 
 interface Exercise {
@@ -27,20 +28,66 @@ interface Module {
   exercises?: Exercise[]
 }
 
-export default function ModulePage() {
-  const [messages, setMessages] = useState<Message[]>([
+const getInitialMessages = (): Message[] => {
+  if (typeof window === 'undefined') {
+    return [
+      {
+        role: 'assistant',
+        content:
+          "Hello! I'm your AI learning assistant. What topic would you like to learn about today, and what's your current skill level? For example, you could say 'I want to learn Python basics as a beginner' or 'I'd like to explore advanced machine learning concepts'.",
+      },
+    ]
+  }
+
+  const savedMessages = sessionStorage.getItem('chatMessages')
+  if (savedMessages) {
+    try {
+      return JSON.parse(savedMessages)
+    } catch (e) {
+      console.error('Failed to restore messages:', e)
+    }
+  }
+
+  return [
     {
       role: 'assistant',
       content:
         "Hello! I'm your AI learning assistant. What topic would you like to learn about today, and what's your current skill level? For example, you could say 'I want to learn Python basics as a beginner' or 'I'd like to explore advanced machine learning concepts'.",
     },
-  ])
+  ]
+}
+
+const getInitialModules = (): Record<string, Module> => {
+  if (typeof window === 'undefined') return {}
+
+  const savedModules = sessionStorage.getItem('chatModules')
+  if (savedModules) {
+    try {
+      return JSON.parse(savedModules)
+    } catch (e) {
+      console.error('Failed to restore modules:', e)
+    }
+  }
+  return {}
+}
+
+export default function ModulePage() {
+  const [messages, setMessages] = useState<Message[]>(getInitialMessages)
   const [inputMessage, setInputMessage] = useState('')
   const [loading, setLoading] = useState(false)
-  const [module, setModule] = useState<Module | null>(null)
+  const [modules, setModules] = useState<Record<string, Module>>(getInitialModules)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  // Save chat state to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem('chatMessages', JSON.stringify(messages))
+  }, [messages])
+
+  useEffect(() => {
+    sessionStorage.setItem('chatModules', JSON.stringify(modules))
+  }, [modules])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -108,20 +155,26 @@ export default function ModulePage() {
 
       const data = await response.json()
 
-      // Set the module data
-      setModule({
+      const newModule = {
         id: data.id,
         topic: data.title,
         skill_level: data.skill_level,
         exercises: data.exercises,
-      })
+      }
 
-      // Add assistant response with module info
+      // Store the module in the modules dictionary
+      setModules((prev) => ({
+        ...prev,
+        [data.id]: newModule,
+      }))
+
+      // Add assistant response with module info, linked to the module ID
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
           content: `Great! I've created a learning module on "${data.title}" at the ${data.skill_level} level. Click below to start learning!`,
+          moduleId: data.id,
         },
       ])
       setLoading(false)
@@ -186,11 +239,11 @@ export default function ModulePage() {
                           {message.content}
                         </p>
 
-                        {/* Show module card if this is the last assistant message and module exists */}
-                        {idx === messages.length - 1 && module && (
+                        {/* Show module card if this message has an associated module */}
+                        {message.moduleId && modules[message.moduleId] && (
                           <div className="mt-4">
                             <button
-                              onClick={() => router.push(`/module/${module.id}`)}
+                              onClick={() => router.push(`/module/${message.moduleId}`)}
                               className="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white p-4 text-left transition-all hover:border-primary-300 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                             >
                               <div className="flex items-center gap-3">
@@ -211,12 +264,12 @@ export default function ModulePage() {
                                 </div>
                                 <div className="min-w-0">
                                   <h3 className="text-sm font-semibold text-gray-900">
-                                    {module.topic}
+                                    {modules[message.moduleId].topic}
                                   </h3>
                                   <p className="text-xs text-gray-500">
-                                    {module.skill_level.charAt(0).toUpperCase() +
-                                      module.skill_level.slice(1)}{' '}
-                                    • {module.exercises?.length || 0} exercises
+                                    {modules[message.moduleId].skill_level.charAt(0).toUpperCase() +
+                                      modules[message.moduleId].skill_level.slice(1)}{' '}
+                                    • {modules[message.moduleId].exercises?.length || 0} exercises
                                   </p>
                                 </div>
                               </div>
