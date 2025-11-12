@@ -1,90 +1,239 @@
 # Learning Artifacts
 
-An AI-powered learning mode that promotes skill development through interactive, progressive exercises. Users input topics, receive Claude-generated modules, and build real expertise through active practice with AI feedback.
+An AI-powered learning platform that promotes skill development through interactive, progressive exercises. Users input topics, receive Claude-generated modules, and build real expertise through active practice with AI feedback.
 
-## Problem Statement
+## Purpose
 
-When AI agents handle complex tasks autonomously, humans can become passive observers rather than active learners, missing opportunities to develop their own skills and understanding.
-
-## Solution
-
-A dedicated learning mode with interactive, artifact-style learning modules requiring progressive knowledge application. Prioritizes understanding over output through active construction, retrieval practice, immediate feedback, and metacognitive reflection.
+Traditional AI interactions can make users passive observers. This platform creates an active learning experience where:
+- Users engage with AI-generated educational content through hands-on exercises
+- Progressive difficulty builds real competency
+- Immediate feedback reinforces learning
+- Multiple exercise types (Analysis, Comparative Evaluation, Structured Framework) promote deep understanding
 
 ## Tech Stack
 
-- **Frontend:** Next.js, TypeScript, Tailwind CSS (deployed on Vercel)
-- **Backend:** FastAPI, Python (deployed on Railway)
-- **Database:** PostgreSQL via Supabase
-- **Auth:** Supabase JWT-based authentication
-- **AI:** Claude API for module generation and answer evaluation
+**Frontend**
+- Next.js 16 (App Router)
+- TypeScript
+- React 19
+- Tailwind CSS 4
+- Supabase Auth (SSR)
 
-## Architecture
+**Backend**
+- FastAPI
+- Python 3.9+
+- PostgreSQL (Supabase)
+- Anthropic Claude API
+- JWT Authentication (RS256)
+
+**DevOps**
+- Frontend: Vercel
+- Backend: Railway
+- Database: Supabase
+
+## Technical Architecture
 
 ```
-Frontend (Next.js + TypeScript + Tailwind)
-    ↓ REST API
-Backend (FastAPI + Python)
-    ↓ Postgres
-Database (Supabase)
+┌─────────────────────────────────────────────────────────────┐
+│                         Frontend                            │
+│                  (Next.js + TypeScript)                     │
+│                                                             │
+│  ┌──────────┐  ┌──────────┐  ┌─────────────────────────┐  │
+│  │  Auth    │  │  Module  │  │  Session Management     │  │
+│  │  (SSR)   │  │  Display │  │  (Hints, Submissions)   │  │
+│  └──────────┘  └──────────┘  └─────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                    REST API (HTTP/JSON)
+                            │
+┌─────────────────────────────────────────────────────────────┐
+│                        Backend                              │
+│                    (FastAPI + Python)                       │
+│                                                             │
+│  ┌──────────────┐  ┌─────────────┐  ┌──────────────────┐  │
+│  │  JWT Auth    │  │  Module     │  │  Answer          │  │
+│  │  Middleware  │  │  Generator  │  │  Evaluator       │  │
+│  └──────────────┘  └─────────────┘  └──────────────────┘  │
+│                            │                                │
+│                    Claude API Client                        │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                    PostgreSQL Connection
+                            │
+┌─────────────────────────────────────────────────────────────┐
+│                    Database (Supabase)                      │
+│                                                             │
+│        Users  │  Modules  │  Sessions  │  Attempts         │
+└─────────────────────────────────────────────────────────────┘
 ```
-
-## Key Features
-
-- AI-generated learning modules with progressive difficulty
-- Split-screen artifact presentation (chat + text editor)
-- Three exercise types: Analysis, Comparative Evaluation, Structured Framework
-- Progressive hint disclosure system
-- Immediate, specific feedback on submissions
-- Lightweight progress tracking and confidence ratings
-
-## Development Roadmap
-
-### Phase 1: Database & Auth Foundation
-Set up Supabase database schema (Users, Modules, Sessions) and implement JWT authentication in FastAPI.
-
-### Phase 2: Backend API Skeleton
-Build core API endpoints for module generation, retrieval, and storage using Claude API integration.
-
-### Phase 3: Session Management
-Implement session lifecycle, answer evaluation, progressive hints, and attempt tracking.
-
-### Phase 4: Frontend Foundation
-Set up Next.js project with Supabase auth and entry screen for topic/skill selection.
-
-### Phase 5: Split-Screen Interface
-Build the main learning interface with chat panel and text editor.
-
-### Phase 6: Interactive Features
-Implement hint system, answer submission, feedback states, and auto-advance logic.
-
-### Phase 7: Completion Experience
-Create completion screen with celebration, confidence rating, and progress visualization.
-
-### Phase 8: Error Handling & Polish
-Add comprehensive error handling, loading states, and retry logic.
-
-### Phase 9: Validation
-End-to-end testing, performance validation, and success metrics verification.
-
-## Getting Started
-
-Documentation for local setup will be added as the project develops.
 
 ## Project Structure
 
 ```
 learning-artifacts/
-├── backend/           # FastAPI backend
-│   ├── routers/      # API endpoints
-│   ├── models/       # Pydantic models
-│   ├── middleware/   # JWT auth middleware
-│   └── config/       # Configuration
-├── frontend/         # Next.js frontend
-│   ├── app/         # App router pages
-│   ├── components/  # React components
-│   └── lib/         # Utilities
-└── migrations/      # Database migrations
+├── frontend/              # Next.js application
+│   ├── app/              # Next.js App Router pages
+│   │   ├── auth/         # Authentication pages
+│   │   ├── dashboard/    # Main dashboard
+│   │   └── learning/     # Learning session interface
+│   ├── components/       # Reusable React components
+│   ├── contexts/         # React contexts (auth, etc.)
+│   ├── hooks/            # Custom React hooks
+│   ├── lib/              # Utilities and API clients
+│   └── types/            # TypeScript definitions
+│
+├── backend/              # FastAPI application
+│   ├── config/           # Settings and database utilities
+│   ├── middleware/       # JWT authentication
+│   ├── models/           # Pydantic schemas
+│   ├── routers/          # API endpoints
+│   ├── services/         # Business logic (Claude integration)
+│   ├── utils/            # Helper functions
+│   ├── migrations/       # Database migrations
+│   └── tests/            # Backend tests
+│
+└── package.json          # Root package for tooling (Prettier, Husky)
 ```
+
+## Setup Instructions
+
+### Prerequisites
+
+- Node.js 18+
+- Python 3.9+
+- PostgreSQL (via Supabase)
+- Anthropic API key
+
+### 1. Clone Repository
+
+```bash
+git clone <repository-url>
+cd learning-artifacts
+```
+
+### 2. Database Setup
+
+1. Create a Supabase project at https://supabase.com
+2. Run the migrations in Supabase SQL Editor:
+   ```bash
+   cat backend/migrations/000_run_all_migrations.sql
+   # Copy output and run in Supabase SQL Editor
+   ```
+
+### 3. Backend Setup
+
+```bash
+cd backend
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your credentials:
+# - SUPABASE_URL
+# - SUPABASE_ANON_KEY
+# - SUPABASE_SERVICE_ROLE_KEY
+# - DATABASE_URL
+# - ANTHROPIC_API_KEY
+
+# Run development server
+python main.py
+# API available at http://localhost:8000
+# Docs at http://localhost:8000/docs
+```
+
+### 4. Frontend Setup
+
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.local.example .env.local
+# Edit .env.local with:
+# - NEXT_PUBLIC_SUPABASE_URL
+# - NEXT_PUBLIC_SUPABASE_ANON_KEY
+# - NEXT_PUBLIC_API_URL (http://localhost:8000)
+
+# Run development server
+npm run dev
+# Application available at http://localhost:3000
+```
+
+### 5. Development Tools
+
+```bash
+# Root directory - install pre-commit hooks
+npm install
+npm run prepare
+
+# Frontend - run tests
+cd frontend
+npm test
+
+# Backend - run tests
+cd backend
+pytest
+```
+
+## Key Features
+
+- **AI Module Generation**: Claude generates customized learning modules based on user-specified topics
+- **Progressive Exercises**: Three exercise types with increasing complexity
+  - Analysis: Break down concepts and explain key components
+  - Comparative Evaluation: Compare approaches and identify trade-offs
+  - Structured Framework: Build comprehensive mental models
+- **Interactive Hints**: Progressive hint system that reveals support incrementally
+- **Immediate Feedback**: Real-time evaluation and specific guidance on submissions
+- **Session Tracking**: Monitor progress, attempts, and confidence ratings
+
+## API Endpoints
+
+### Health
+- `GET /health` - System health check
+- `GET /ping` - Simple connectivity test
+
+### Authentication
+- Managed via Supabase Auth (JWT tokens)
+
+### Modules
+- `POST /api/modules/generate` - Generate new module
+- `GET /api/modules` - List user's modules
+- `GET /api/modules/{id}` - Get module details
+
+### Sessions
+- `POST /api/sessions` - Start new session
+- `GET /api/sessions/{id}` - Get session state
+- `POST /api/sessions/{id}/submit` - Submit answer
+- `POST /api/sessions/{id}/hint` - Request hint
+- `PATCH /api/sessions/{id}` - Update session
+
+## Development
+
+### Code Quality
+
+```bash
+# Frontend
+npm run format        # Auto-format with Prettier
+npm run format:check  # Check formatting
+npm run lint          # ESLint
+
+# Backend
+black .               # Auto-format Python
+isort .               # Sort imports
+pytest                # Run tests
+```
+
+### Pre-commit Hooks
+
+The project uses Husky and lint-staged to automatically format frontend code before commits.
 
 ## License
 
