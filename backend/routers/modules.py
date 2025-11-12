@@ -191,7 +191,7 @@ async def generate_new_module(
     try:
         # Extract topic and skill level from message if provided
         if request.message:
-            extracted = extract_topic_and_level(request.message)
+            extracted = await extract_topic_and_level(request.message)
             topic = extracted["topic"]
             skill_level = extracted["skill_level"]
         elif request.topic and request.skill_level:
@@ -204,7 +204,7 @@ async def generate_new_module(
             )
 
         # Generate module using Claude API
-        module_data = generate_module(
+        module_data = await generate_module(
             topic=topic,
             skill_level=skill_level,
             exercise_count=request.exercise_count,

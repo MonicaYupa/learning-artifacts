@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     # API Configuration
     API_PREFIX: str = "/api"
 
+    # Database Connection Pool Configuration
+    DB_POOL_MIN_SIZE: int = 2
+    DB_POOL_MAX_SIZE: int = 10
+    DB_POOL_TIMEOUT: float = 30.0  # seconds to wait for connection from pool
+    DB_POOL_MAX_LIFETIME: float = 3600.0  # 1 hour - recycle connections
+    DB_POOL_MAX_IDLE: float = 600.0  # 10 minutes - close idle connections
+
     # Sentry Configuration
     SENTRY_DSN: str = ""  # Optional: Leave empty to disable Sentry
     RELEASE_VERSION: str = "1.0.0"  # Optional: Release version for Sentry tracking

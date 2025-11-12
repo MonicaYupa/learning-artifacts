@@ -6,7 +6,8 @@ Handles interactions with Claude API for module generation and answer evaluation
 import json
 from typing import Dict, List
 
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic
+from config.constants import ClaudeConstants, RetryConstants
 from config.settings import settings
 from services.mock_data import (
     evaluate_mock_answer,
@@ -15,56 +16,68 @@ from services.mock_data import (
 )
 from utils.retry_handler import with_retry
 
-# Initialize Anthropic client
-client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+# Initialize Anthropic async client
+client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 
-@with_retry(max_retries=2, timeout=30.0)
-def _call_claude_for_extraction(
-    system_prompt: str, user_prompt: str, timeout: float = 30.0
+@with_retry(
+    max_retries=RetryConstants.MAX_RETRIES, timeout=ClaudeConstants.EXTRACTION_TIMEOUT
+)
+async def _call_claude_for_extraction(
+    system_prompt: str,
+    user_prompt: str,
+    timeout: float = ClaudeConstants.EXTRACTION_TIMEOUT,
 ):
     """Helper function to call Claude API for topic extraction with retry logic"""
-    return client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=500,
-        temperature=0.3,
+    return await client.messages.create(
+        model=ClaudeConstants.MODEL,
+        max_tokens=ClaudeConstants.EXTRACTION_MAX_TOKENS,
+        temperature=ClaudeConstants.EXTRACTION_TEMPERATURE,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
         timeout=timeout,
     )
 
 
-@with_retry(max_retries=2, timeout=90.0)
-def _call_claude_for_generation(
-    system_prompt: str, user_prompt: str, timeout: float = 90.0
+@with_retry(
+    max_retries=RetryConstants.MAX_RETRIES, timeout=ClaudeConstants.GENERATION_TIMEOUT
+)
+async def _call_claude_for_generation(
+    system_prompt: str,
+    user_prompt: str,
+    timeout: float = ClaudeConstants.GENERATION_TIMEOUT,
 ):
     """Helper function to call Claude API for module generation with retry logic"""
-    return client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=8000,
-        temperature=0.7,
+    return await client.messages.create(
+        model=ClaudeConstants.MODEL,
+        max_tokens=ClaudeConstants.GENERATION_MAX_TOKENS,
+        temperature=ClaudeConstants.GENERATION_TEMPERATURE,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
         timeout=timeout,
     )
 
 
-@with_retry(max_retries=2, timeout=60.0)
-def _call_claude_for_evaluation(
-    system_prompt: str, user_prompt: str, timeout: float = 60.0
+@with_retry(
+    max_retries=RetryConstants.MAX_RETRIES, timeout=ClaudeConstants.EVALUATION_TIMEOUT
+)
+async def _call_claude_for_evaluation(
+    system_prompt: str,
+    user_prompt: str,
+    timeout: float = ClaudeConstants.EVALUATION_TIMEOUT,
 ):
     """Helper function to call Claude API for answer evaluation with retry logic"""
-    return client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=1000,
-        temperature=0.5,
+    return await client.messages.create(
+        model=ClaudeConstants.MODEL,
+        max_tokens=ClaudeConstants.EVALUATION_MAX_TOKENS,
+        temperature=ClaudeConstants.EVALUATION_TEMPERATURE,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
         timeout=timeout,
     )
 
 
-def extract_topic_and_level(message: str) -> Dict[str, str]:
+async def extract_topic_and_level(message: str) -> Dict[str, str]:
     """
     Extract topic and skill level from user's message using Claude API
 
@@ -103,7 +116,7 @@ Return ONLY valid JSON matching this schema - no markdown, no code blocks:
 Return ONLY the JSON object."""
 
     try:
-        response = _call_claude_for_extraction(system_prompt, user_prompt)
+        response = await _call_claude_for_extraction(system_prompt, user_prompt)
 
         # Extract the text content
         response_text = response.content[0].text.strip()
@@ -135,7 +148,9 @@ Return ONLY the JSON object."""
         raise Exception(f"Topic and level extraction failed: {str(e)}")
 
 
-def generate_module(topic: str, skill_level: str, exercise_count: int = 3) -> Dict:
+async def generate_module(
+    topic: str, skill_level: str, exercise_count: int = 3
+) -> Dict:
     """
     Generate a learning module using Claude API
 
@@ -254,7 +269,7 @@ Ensure the topic is appropriate for {skill_level} level and exercises build on e
 Return ONLY the JSON object, no markdown formatting or code blocks."""
 
     try:
-        response = _call_claude_for_generation(system_prompt, user_prompt)
+        response = await _call_claude_for_generation(system_prompt, user_prompt)
 
         # Extract the text content from the response
         response_text = response.content[0].text.strip()
@@ -298,7 +313,7 @@ Return ONLY the JSON object, no markdown formatting or code blocks."""
         raise Exception(f"Module generation failed: {str(e)}")
 
 
-def evaluate_answer(exercise: Dict, answer_text: str, hints_used: int) -> Dict:
+async def evaluate_answer(exercise: Dict, answer_text: str, hints_used: int) -> Dict:
     """
     Evaluate a student's answer using Claude API
 
@@ -364,7 +379,7 @@ Evaluate this answer against the validation criteria. Consider that using hints 
 Return ONLY the JSON evaluation object."""
 
     try:
-        response = _call_claude_for_evaluation(system_prompt, user_prompt)
+        response = await _call_claude_for_evaluation(system_prompt, user_prompt)
 
         # Extract the text content
         response_text = response.content[0].text.strip()

@@ -5,7 +5,7 @@ FastAPI application for AI-powered learning modules
 
 from contextlib import asynccontextmanager
 
-from config.database import test_db_connection
+from config.database import close_db_pool, init_db_pool, test_db_connection
 from config.sentry import init_sentry
 from config.settings import settings
 from fastapi import FastAPI
@@ -27,16 +27,31 @@ async def lifespan(app: FastAPI):
     print("Starting Learning Artifacts API...")
     print(f"Environment: {settings.ENVIRONMENT}")
 
+    # Initialize database connection pool
+    try:
+        init_db_pool()
+        print("✓ Database connection pool initialized")
+    except Exception as e:
+        print(f"✗ Failed to initialize database pool: {e}")
+        raise  # Prevent startup if DB pool fails
+
     # Test database connection
     if await test_db_connection():
         print("✓ Database connection successful")
     else:
         print("✗ Database connection failed")
+        # Close pool since DB is not reachable
+        close_db_pool()
+        raise RuntimeError("Database connection failed")
 
     yield
 
     # Shutdown
     print("Shutting down Learning Artifacts API...")
+
+    # Close database connection pool
+    close_db_pool()
+    print("✓ Database connection pool closed")
 
 
 # Create FastAPI application

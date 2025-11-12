@@ -3,6 +3,8 @@ Retry Handler with Exponential Backoff
 Handles automatic retries for Claude API calls with transient failures
 """
 
+import asyncio
+import inspect
 import logging
 import random
 import time
@@ -10,12 +12,9 @@ from functools import wraps
 from typing import Any, Callable, Tuple, Type
 
 from anthropic import APIError, APIStatusError, APITimeoutError, RateLimitError
+from config.constants import RetryConstants
 
 logger = logging.getLogger(__name__)
-
-
-# Retryable HTTP status codes (transient errors)
-RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 
 # Retryable exception types
 RETRYABLE_EXCEPTIONS = (
@@ -85,7 +84,7 @@ def should_retry(
 
     # Check for API status errors with retryable status codes
     if isinstance(exception, APIStatusError):
-        if exception.status_code in RETRYABLE_STATUS_CODES:
+        if exception.status_code in RetryConstants.RETRYABLE_STATUS_CODES:
             delay = exponential_backoff_with_jitter(attempt)
             logger.warning(
                 f"API error {exception.status_code}. Retry in {delay:.2f}s "
@@ -128,83 +127,165 @@ def with_retry(
 ):
     """
     Decorator to add automatic retry logic with exponential backoff
+    Supports both sync and async functions
 
     Args:
-        max_retries: Maximum number of retry attempts (default: 3)
+        max_retries: Maximum number of retry attempts (default: 2)
         timeout: Timeout for each API call in seconds (default: 60)
         retryable_exceptions: Tuple of exception types to retry on
 
     Usage:
-        @with_retry(max_retries=3, timeout=60.0)
-        def my_api_call():
+        @with_retry(max_retries=2, timeout=60.0)
+        async def my_async_api_call():
+            return await client.messages.create(...)
+
+        @with_retry(max_retries=2, timeout=60.0)
+        def my_sync_api_call():
             return client.messages.create(...)
     """
 
     def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            # Add timeout to kwargs if not already present
-            if "timeout" not in kwargs and timeout:
-                kwargs["timeout"] = timeout
+        # Check if function is async
+        is_async = inspect.iscoroutinefunction(func)
 
-            attempt = 0
-            last_exception = None
+        if is_async:
 
-            while attempt <= max_retries:
-                attempt += 1
+            @wraps(func)
+            async def async_wrapper(*args, **kwargs) -> Any:
+                # Add timeout to kwargs if not already present
+                if "timeout" not in kwargs and timeout:
+                    kwargs["timeout"] = timeout
 
-                try:
-                    # Attempt the function call
-                    result = func(*args, **kwargs)
+                attempt = 0
+                last_exception = None
 
-                    # Log successful retry if this wasn't the first attempt
-                    if attempt > 1:
-                        func_name = getattr(func, "__name__", "function")
-                        logger.info(
-                            f"{func_name} succeeded on attempt {attempt}/{max_retries + 1}"
+                while attempt <= max_retries:
+                    attempt += 1
+
+                    try:
+                        # Attempt the function call
+                        result = await func(*args, **kwargs)
+
+                        # Log successful retry if this wasn't the first attempt
+                        if attempt > 1:
+                            func_name = getattr(func, "__name__", "function")
+                            logger.info(
+                                f"{func_name} succeeded on attempt {attempt}/{max_retries + 1}"
+                            )
+
+                        return result
+
+                    except retryable_exceptions as e:
+                        last_exception = e
+
+                        # Check if we should retry
+                        should_retry_result, delay = should_retry(
+                            e, attempt, max_retries
                         )
 
-                    return result
+                        if should_retry_result:
+                            # Wait before retrying (async sleep)
+                            logger.info(f"Waiting {delay:.2f}s before retry...")
+                            await asyncio.sleep(delay)
+                            continue
+                        else:
+                            # Non-retryable or exhausted retries
+                            func_name = getattr(func, "__name__", "function")
+                            logger.error(
+                                f"{func_name} failed after {attempt} attempt(s): "
+                                f"{type(e).__name__}: {str(e)}"
+                            )
+                            raise
 
-                except retryable_exceptions as e:
-                    last_exception = e
-
-                    # Check if we should retry
-                    should_retry_result, delay = should_retry(e, attempt, max_retries)
-
-                    if should_retry_result:
-                        # Wait before retrying
-                        logger.info(f"Waiting {delay:.2f}s before retry...")
-                        time.sleep(delay)
-                        continue
-                    else:
-                        # Non-retryable or exhausted retries
+                    except Exception as e:
+                        # Non-retryable exception, raise immediately
                         func_name = getattr(func, "__name__", "function")
                         logger.error(
-                            f"{func_name} failed after {attempt} attempt(s): "
+                            f"{func_name} failed with non-retryable error: "
                             f"{type(e).__name__}: {str(e)}"
                         )
                         raise
 
-                except Exception as e:
-                    # Non-retryable exception, raise immediately
-                    func_name = getattr(func, "__name__", "function")
-                    logger.error(
-                        f"{func_name} failed with non-retryable error: "
-                        f"{type(e).__name__}: {str(e)}"
+                # If we get here, we've exhausted all retries
+                func_name = getattr(func, "__name__", "function")
+                logger.error(f"{func_name} failed after {max_retries + 1} attempts")
+                if last_exception:
+                    raise last_exception
+                else:
+                    raise Exception(
+                        f"{func.__name__} failed after {max_retries + 1} attempts"
                     )
-                    raise
 
-            # If we get here, we've exhausted all retries
-            func_name = getattr(func, "__name__", "function")
-            logger.error(f"{func_name} failed after {max_retries + 1} attempts")
-            if last_exception:
-                raise last_exception
-            else:
-                raise Exception(
-                    f"{func.__name__} failed after {max_retries + 1} attempts"
-                )
+            return async_wrapper
 
-        return wrapper
+        else:
+
+            @wraps(func)
+            def sync_wrapper(*args, **kwargs) -> Any:
+                # Add timeout to kwargs if not already present
+                if "timeout" not in kwargs and timeout:
+                    kwargs["timeout"] = timeout
+
+                attempt = 0
+                last_exception = None
+
+                while attempt <= max_retries:
+                    attempt += 1
+
+                    try:
+                        # Attempt the function call
+                        result = func(*args, **kwargs)
+
+                        # Log successful retry if this wasn't the first attempt
+                        if attempt > 1:
+                            func_name = getattr(func, "__name__", "function")
+                            logger.info(
+                                f"{func_name} succeeded on attempt {attempt}/{max_retries + 1}"
+                            )
+
+                        return result
+
+                    except retryable_exceptions as e:
+                        last_exception = e
+
+                        # Check if we should retry
+                        should_retry_result, delay = should_retry(
+                            e, attempt, max_retries
+                        )
+
+                        if should_retry_result:
+                            # Wait before retrying (sync sleep)
+                            logger.info(f"Waiting {delay:.2f}s before retry...")
+                            time.sleep(delay)
+                            continue
+                        else:
+                            # Non-retryable or exhausted retries
+                            func_name = getattr(func, "__name__", "function")
+                            logger.error(
+                                f"{func_name} failed after {attempt} attempt(s): "
+                                f"{type(e).__name__}: {str(e)}"
+                            )
+                            raise
+
+                    except Exception as e:
+                        # Non-retryable exception, raise immediately
+                        func_name = getattr(func, "__name__", "function")
+                        logger.error(
+                            f"{func_name} failed with non-retryable error: "
+                            f"{type(e).__name__}: {str(e)}"
+                        )
+                        raise
+
+                # If we get here, we've exhausted all retries
+                func_name = getattr(func, "__name__", "function")
+                logger.error(f"{func_name} failed after {max_retries + 1} attempts")
+                if last_exception:
+                    raise last_exception
+                else:
+                    raise Exception(
+                        f"{func.__name__} failed after {max_retries + 1} attempts"
+                    )
+
+            return sync_wrapper
 
     return decorator

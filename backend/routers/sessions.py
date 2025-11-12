@@ -8,6 +8,7 @@ from datetime import datetime
 
 import psycopg
 from anthropic import APITimeoutError, RateLimitError
+from config.constants import ExerciseConstants
 from config.database import execute_query
 from fastapi import APIRouter, Depends, HTTPException, status
 from middleware.auth import get_current_user_id
@@ -30,10 +31,6 @@ from utils.error_handler import (
 )
 
 router = APIRouter()
-
-# Constants for session limits
-MAX_ATTEMPTS_PER_EXERCISE = 3
-MAX_HINTS_PER_EXERCISE = 3
 
 
 async def verify_session_ownership(session_id: str, user_id: str) -> dict:
@@ -269,57 +266,35 @@ async def update_session(
         # Verify ownership
         await verify_session_ownership(session_id, user_id)
 
-        # Whitelist of allowed column names to prevent SQL injection
-        ALLOWED_COLUMNS = {
-            "current_exercise_index",
-            "status",
-            "confidence_rating",
-            "completed_at",
+        # Security: Define explicit mapping of request fields to database columns
+
+        ALLOWED_UPDATE_FIELDS = {
+            "current_exercise_index": "current_exercise_index",
+            "status": "status",
+            "confidence_rating": "confidence_rating",
         }
 
         # Build dynamic update query based on provided fields
         update_clauses = []
         params = []
 
-        if request.current_exercise_index is not None:
-            column = "current_exercise_index"
-            if column not in ALLOWED_COLUMNS:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Invalid column name",
-                )
-            update_clauses.append(f"{column} = %s")
-            params.append(request.current_exercise_index)
+        # Process standard fields using the field mapping
+        for field_name, column_name in ALLOWED_UPDATE_FIELDS.items():
+            value = getattr(request, field_name, None)
 
-        if request.status is not None:
-            column = "status"
-            if column not in ALLOWED_COLUMNS:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Invalid column name",
-                )
-            update_clauses.append(f"{column} = %s")
-            params.append(request.status.value)
+            if value is not None:
+                # Column name is from trusted dictionary, safe to use in f-string
+                update_clauses.append(f"{column_name} = %s")
 
-            # If marking as completed, set completed_at
-            if request.status.value == "completed":
-                completed_column = "completed_at"
-                if completed_column not in ALLOWED_COLUMNS:
-                    raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail="Invalid column name",
-                    )
-                update_clauses.append(f"{completed_column} = NOW()")
+                # Handle enum values (like status)
+                if hasattr(value, "value"):
+                    params.append(value.value)
+                else:
+                    params.append(value)
 
-        if request.confidence_rating is not None:
-            column = "confidence_rating"
-            if column not in ALLOWED_COLUMNS:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Invalid column name",
-                )
-            update_clauses.append(f"{column} = %s")
-            params.append(request.confidence_rating)
+                # Special handling: If marking as completed, set completed_at
+                if field_name == "status" and value.value == "completed":
+                    update_clauses.append("completed_at = NOW()")
 
         if not update_clauses:
             raise HTTPException(
@@ -330,8 +305,8 @@ async def update_session(
         # Add session_id to params
         params.append(session_id)
 
-        # Build query with whitelisted columns only
-        # All column names have been validated against ALLOWED_COLUMNS
+        # Build query with mapped columns only
+        # Security: Column names are from ALLOWED_UPDATE_FIELDS dictionary, not user input
         query = f"""
             UPDATE sessions
             SET {', '.join(update_clauses)}
@@ -450,14 +425,14 @@ async def submit_answer(
         attempt_number = len(exercise_attempts) + 1
 
         # Check if max attempts reached
-        if attempt_number > MAX_ATTEMPTS_PER_EXERCISE:
+        if attempt_number > ExerciseConstants.MAX_ATTEMPTS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Maximum attempts ({MAX_ATTEMPTS_PER_EXERCISE}) reached for this exercise",
+                detail=f"Maximum attempts ({ExerciseConstants.MAX_ATTEMPTS}) reached for this exercise",
             )
 
         # Evaluate answer using Claude
-        evaluation = evaluate_answer(
+        evaluation = await evaluate_answer(
             exercise=current_exercise,
             answer_text=request.answer_text,
             hints_used=request.hints_used,
@@ -490,11 +465,12 @@ async def submit_answer(
         execute_query(update_query, (json.dumps(attempts), session_id))
 
         # Check if hint is available (if user hasn't used all hints)
-        hint_available = request.hints_used < MAX_HINTS_PER_EXERCISE
+        hint_available = request.hints_used < ExerciseConstants.MAX_HINTS
 
         # Check if model answer is available (after max attempts or strong assessment)
         model_answer_available = (
-            attempt_number >= MAX_ATTEMPTS_PER_EXERCISE or evaluation["should_advance"]
+            attempt_number >= ExerciseConstants.MAX_ATTEMPTS
+            or evaluation["should_advance"]
         )
 
         return {
@@ -628,10 +604,10 @@ async def request_hint(
         # Determine hint level
         if request.hint_level is not None:
             # Use requested level if valid
-            if not (1 <= request.hint_level <= MAX_HINTS_PER_EXERCISE):
+            if not (1 <= request.hint_level <= ExerciseConstants.MAX_HINTS):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Hint level must be between 1 and {MAX_HINTS_PER_EXERCISE}",
+                    detail=f"Hint level must be between 1 and {ExerciseConstants.MAX_HINTS}",
                 )
             hint_level = request.hint_level
         else:
@@ -642,7 +618,7 @@ async def request_hint(
 
             hint_level = max_hints_used + 1
 
-            if hint_level > MAX_HINTS_PER_EXERCISE:
+            if hint_level > ExerciseConstants.MAX_HINTS:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="All hints have been used for this exercise",
@@ -650,14 +626,14 @@ async def request_hint(
 
         # Get hint text (hints are 0-indexed in array, but 1-indexed for user)
         hints = current_exercise.get("hints", [])
-        if len(hints) < MAX_HINTS_PER_EXERCISE:
+        if len(hints) < ExerciseConstants.MAX_HINTS:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Exercise does not have sufficient hints",
             )
 
         hint_text = hints[hint_level - 1]
-        hints_remaining = MAX_HINTS_PER_EXERCISE - hint_level
+        hints_remaining = ExerciseConstants.MAX_HINTS - hint_level
 
         return {
             "hint_level": hint_level,

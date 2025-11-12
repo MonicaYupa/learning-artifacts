@@ -18,8 +18,8 @@ from utils.error_handler import safe_error_detail
 # Configure logger
 logger = logging.getLogger(__name__)
 
-# HTTP Bearer token scheme
-security = HTTPBearer()
+# HTTP Bearer token scheme (auto_error=False to return 401 instead of 403)
+security = HTTPBearer(auto_error=False)
 
 # Cache for JWKS (JSON Web Key Set) with TTL
 _jwks_cache: Optional[dict] = None
@@ -157,7 +157,7 @@ async def decode_token(token: str) -> dict:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> dict:
     """
     Dependency to get the current authenticated user
@@ -171,6 +171,13 @@ async def get_current_user(
     Raises:
         HTTPException: If authentication fails
     """
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     token = credentials.credentials
 
     # Decode and verify token using JWKS

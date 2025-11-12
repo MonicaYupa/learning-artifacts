@@ -2,7 +2,7 @@
 Test timeout handling for Claude API calls and database queries
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from anthropic import APITimeoutError
@@ -12,7 +12,8 @@ from fastapi import HTTPException, status
 class TestClaudeAPITimeouts:
     """Test timeout handling for Claude API calls"""
 
-    def test_api_timeout_error_raised(self):
+    @pytest.mark.asyncio
+    async def test_api_timeout_error_raised(self):
         """Test that APITimeoutError is raised when Claude API times out"""
         from services.claude_service import _call_claude_for_extraction
 
@@ -24,9 +25,10 @@ class TestClaudeAPITimeouts:
 
             # Call should raise APITimeoutError
             with pytest.raises(APITimeoutError):
-                _call_claude_for_extraction("system", "user")
+                await _call_claude_for_extraction("system", "user")
 
-    def test_extraction_timeout_after_retries(self):
+    @pytest.mark.asyncio
+    async def test_extraction_timeout_after_retries(self):
         """Test that extraction function times out after max retries"""
         from services.claude_service import _call_claude_for_extraction
 
@@ -38,12 +40,13 @@ class TestClaudeAPITimeouts:
 
             # Should raise after retries exhausted
             with pytest.raises(APITimeoutError):
-                _call_claude_for_extraction("system", "user")
+                await _call_claude_for_extraction("system", "user")
 
             # Should have attempted multiple times (original + retries)
             assert mock_client.messages.create.call_count >= 2
 
-    def test_generation_timeout_after_retries(self):
+    @pytest.mark.asyncio
+    async def test_generation_timeout_after_retries(self):
         """Test that generation function times out after max retries"""
         from services.claude_service import _call_claude_for_generation
 
@@ -55,12 +58,13 @@ class TestClaudeAPITimeouts:
 
             # Should raise after retries exhausted
             with pytest.raises(APITimeoutError):
-                _call_claude_for_generation("system", "user")
+                await _call_claude_for_generation("system", "user")
 
             # Should have attempted multiple times (original + retries)
             assert mock_client.messages.create.call_count >= 2
 
-    def test_evaluation_timeout_after_retries(self):
+    @pytest.mark.asyncio
+    async def test_evaluation_timeout_after_retries(self):
         """Test that evaluation function times out after max retries"""
         from services.claude_service import _call_claude_for_evaluation
 
@@ -72,59 +76,62 @@ class TestClaudeAPITimeouts:
 
             # Should raise after retries exhausted
             with pytest.raises(APITimeoutError):
-                _call_claude_for_evaluation("system", "user")
+                await _call_claude_for_evaluation("system", "user")
 
             # Should have attempted multiple times (original + retries)
             assert mock_client.messages.create.call_count >= 2
 
-    def test_timeout_values_passed_to_api(self):
+    @pytest.mark.asyncio
+    async def test_timeout_values_passed_to_api(self):
         """Test that timeout values are correctly passed to API calls"""
         from services.claude_service import _call_claude_for_extraction
 
         with patch("services.claude_service.client") as mock_client:
-            # Mock successful response
+            # Mock successful response (async mock for await)
             mock_response = Mock()
             mock_response.content = [Mock(text="test")]
-            mock_client.messages.create.return_value = mock_response
+            mock_client.messages.create = AsyncMock(return_value=mock_response)
 
             # Call the function
-            _call_claude_for_extraction("system", "user")
+            await _call_claude_for_extraction("system", "user")
 
             # Verify timeout was passed to API call
             call_kwargs = mock_client.messages.create.call_args[1]
             assert "timeout" in call_kwargs
             assert call_kwargs["timeout"] == 30.0
 
-    def test_different_timeout_for_generation(self):
+    @pytest.mark.asyncio
+    async def test_different_timeout_for_generation(self):
         """Test that generation has longer timeout than extraction"""
         from services.claude_service import _call_claude_for_generation
 
         with patch("services.claude_service.client") as mock_client:
-            # Mock successful response
+            # Mock successful response (async mock for await)
             mock_response = Mock()
             mock_response.content = [Mock(text="test")]
-            mock_client.messages.create.return_value = mock_response
+            mock_client.messages.create = AsyncMock(return_value=mock_response)
 
             # Call the function
-            _call_claude_for_generation("system", "user")
+            await _call_claude_for_generation("system", "user")
 
             # Verify longer timeout for generation
             call_kwargs = mock_client.messages.create.call_args[1]
             assert "timeout" in call_kwargs
             assert call_kwargs["timeout"] == 90.0
 
-    def test_different_timeout_for_evaluation(self):
+    @pytest.mark.asyncio
+    async def test_different_timeout_for_evaluation(self):
         """Test that evaluation has medium timeout"""
         from services.claude_service import _call_claude_for_evaluation
 
         with patch("services.claude_service.client") as mock_client:
-            # Mock successful response
+            # Mock successful response (async mock for await)
             mock_response = Mock()
             mock_response.content = [Mock(text="test")]
-            mock_client.messages.create.return_value = mock_response
+            mock_client.messages.create = AsyncMock(return_value=mock_response)
 
             # Call the function
-            _call_claude_for_evaluation("system", "user")
+            await _call_claude_for_evaluation("system", "user")
 
             # Verify medium timeout for evaluation
             call_kwargs = mock_client.messages.create.call_args[1]
@@ -316,7 +323,8 @@ class Test504GatewayTimeoutResponses:
 class TestEndToEndTimeoutHandling:
     """Test end-to-end timeout handling in routers"""
 
-    def test_timeout_handling_in_service_layer(self):
+    @pytest.mark.asyncio
+    async def test_timeout_handling_in_service_layer(self):
         """Test that timeout errors are properly raised from service layer"""
         from anthropic import APITimeoutError
         from services.claude_service import _call_claude_for_extraction
@@ -329,7 +337,7 @@ class TestEndToEndTimeoutHandling:
 
             # Service layer should raise the timeout error after retries
             with pytest.raises(APITimeoutError):
-                _call_claude_for_extraction("system", "user")
+                await _call_claude_for_extraction("system", "user")
 
     def test_timeout_error_attributes(self):
         """Test that APITimeoutError has expected attributes"""
