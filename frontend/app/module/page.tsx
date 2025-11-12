@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import RobotLogo from '@/components/RobotLogo'
+import type { Exercise, ModuleProgress } from '@/types/exercise'
 
 interface Message {
   role: 'assistant' | 'user'
@@ -12,26 +13,11 @@ interface Message {
   moduleId?: string // Link message to a module
 }
 
-interface Exercise {
-  id: string
-  type: 'analysis' | 'comparative' | 'framework'
-  prompt: string
-  material?: string
-  options?: string[]
-  scaffold?: { [key: string]: string }
-  hints: string[]
-}
-
 interface Module {
   id: string
   topic: string
   skill_level: string
   exercises?: Exercise[]
-}
-
-interface ModuleProgress {
-  completedExercises: number[]
-  exerciseResponses: Record<number, string>
 }
 
 type ModuleStatus = 'Not Started' | 'In Progress' | 'Completed'
@@ -124,8 +110,8 @@ export default function ModulePage() {
   }, [modules])
 
   // Listen for storage changes to update statuses when progress is made in module page
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
+  const handleStorageChange = useCallback(
+    (e: StorageEvent) => {
       if (e.key?.startsWith('module_') && e.key?.endsWith('_progress')) {
         // Re-calculate all module statuses
         const statuses: Record<string, ModuleStatus> = {}
@@ -134,11 +120,14 @@ export default function ModulePage() {
         })
         setModuleStatuses(statuses)
       }
-    }
+    },
+    [modules]
+  )
 
+  useEffect(() => {
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
-  }, [modules])
+  }, [handleStorageChange])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -185,15 +174,6 @@ export default function ModulePage() {
         return
       }
 
-      // Debug: Check token algorithm
-      try {
-        const tokenParts = session.access_token.split('.')
-        const header = JSON.parse(atob(tokenParts[0]))
-        console.log('[DEBUG] Token algorithm:', header.alg, 'kid:', header.kid)
-      } catch (e) {
-        console.error('Failed to decode token header:', e)
-      }
-
       // Call backend API to generate module based on user message
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/modules/generate`, {
         method: 'POST',
@@ -209,7 +189,6 @@ export default function ModulePage() {
       if (!response.ok) {
         // API request failed - show helpful error to user
         const errorData = await response.json().catch(() => null)
-        console.error('API request failed:', response.status, response.statusText, errorData)
 
         // Provide helpful feedback based on the error
         let errorMessage = `I'm having trouble understanding what you'd like to learn. Could you provide more details? For example: "I want to learn Python basics as a beginner" or "I'd like to explore advanced machine learning concepts".`
@@ -347,12 +326,13 @@ export default function ModulePage() {
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"
+                                        strokeWidth={2}
                                       >
+                                        {/* Barbell/Dumbbell icon */}
                                         <path
                                           strokeLinecap="round"
                                           strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                                          d="M17.5 7.5v9M6.5 7.5v9M8.5 11h7M3 9.5v5a1.5 1.5 0 003 0v-5a1.5 1.5 0 00-3 0zm15 0v5a1.5 1.5 0 003 0v-5a1.5 1.5 0 00-3 0z"
                                         />
                                       </svg>
                                     </div>

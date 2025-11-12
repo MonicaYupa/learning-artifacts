@@ -4,12 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import CelebrationAnimation from './CelebrationAnimation'
 import ConfidenceRating from './ConfidenceRating'
-
-interface Exercise {
-  id: string
-  name: string
-  type: string
-}
+import type { Exercise } from '@/types/exercise'
 
 interface CompletionScreenProps {
   moduleId: string

@@ -9,18 +9,14 @@ import HintSystem from '@/components/HintSystem'
 import FeedbackDisplay from '@/components/FeedbackDisplay'
 import AnswerSubmission from '@/components/AnswerSubmission'
 import CompletionScreen from '@/components/CompletionScreen'
+import AnalysisExercise from '@/components/exercises/AnalysisExercise'
+import ComparativeExercise from '@/components/exercises/ComparativeExercise'
+import FrameworkExercise from '@/components/exercises/FrameworkExercise'
+import ExerciseProgressNavigator from '@/components/ExerciseProgressNavigator'
+import CelebrationConfetti from '@/components/CelebrationConfetti'
+import { useModuleProgress } from '@/hooks/useModuleProgress'
 import type { HintResponse, SubmitResponse } from '@/types/session'
-
-interface Exercise {
-  id: string
-  name: string
-  type: 'analysis' | 'comparative' | 'framework'
-  prompt: string
-  material?: string
-  options?: string[]
-  scaffold?: { [key: string]: string }
-  hints: string[]
-}
+import type { Exercise, ExerciseMessage } from '@/types/exercise'
 
 interface Module {
   id: string
@@ -30,16 +26,6 @@ interface Module {
   created_at: string
   domain?: string
   exercises?: Exercise[]
-}
-
-interface ExerciseMessage {
-  id: string
-  type: 'hint' | 'feedback'
-  content: string
-  timestamp: Date
-  assessment?: 'strong' | 'developing' | 'needs_support'
-  attemptNumber?: number
-  modelAnswer?: string
 }
 
 export default function ModulePage() {
@@ -66,105 +52,24 @@ export default function ModulePage() {
   // Completion modal state
   const [showCompletionModal, setShowCompletionModal] = useState(false)
 
-  // Track exercise completion and saved responses
-  const [completedExercises, setCompletedExercises] = useState<Set<number>>(new Set()) // Tracks truly completed exercises
-  const [exerciseResponses, setExerciseResponses] = useState<Map<number, string>>(new Map())
-  const [exerciseHints, setExerciseHints] = useState<Map<number, number>>(new Map()) // Track hints used per exercise
-  const [exerciseHintMessages, setExerciseHintMessages] = useState<Map<number, ExerciseMessage[]>>(
-    new Map()
-  ) // Store hint messages per exercise
-  const [exerciseAssessments, setExerciseAssessments] = useState<
-    Map<number, 'strong' | 'developing' | 'needs_support'>
-  >(new Map()) // Track assessment per exercise
-  const [isInitialLoad, setIsInitialLoad] = useState(true) // Track if we've loaded from localStorage yet
-
   const router = useRouter()
   const params = useParams()
   const supabase = createClient()
 
-  // Load persisted state from localStorage on mount
-  useEffect(() => {
-    if (params.id) {
-      const storageKey = `module_${params.id}_progress`
-      const saved = localStorage.getItem(storageKey)
-      console.log('Loading progress for module', params.id, ':', saved)
-      if (saved) {
-        try {
-          const {
-            completedExercises: completed,
-            exerciseResponses: responses,
-            exerciseHints: hints,
-            exerciseHintMessages: hintMessages,
-            exerciseAssessments: assessments,
-          } = JSON.parse(saved)
-          if (completed && Array.isArray(completed) && completed.length > 0) {
-            const completedSet = new Set<number>(completed as number[])
-            setCompletedExercises(completedSet)
-            console.log('Restored completed exercises:', completed)
-          }
-          if (responses) {
-            const responsesMap = new Map(
-              Object.entries(responses).map(([k, v]) => [Number(k), v as string])
-            )
-            setExerciseResponses(responsesMap)
-            console.log('Restored exercise responses:', responsesMap)
-          }
-          if (hints) {
-            const hintsMap = new Map(
-              Object.entries(hints).map(([k, v]) => [Number(k), v as number])
-            )
-            setExerciseHints(hintsMap)
-            console.log('Restored exercise hints:', hintsMap)
-          }
-          if (hintMessages) {
-            const hintMessagesMap = new Map(
-              Object.entries(hintMessages).map(([k, v]) => [Number(k), v as ExerciseMessage[]])
-            )
-            setExerciseHintMessages(hintMessagesMap)
-            console.log('Restored hint messages:', hintMessagesMap)
-          }
-          if (assessments) {
-            const assessmentsMap = new Map(
-              Object.entries(assessments).map(([k, v]) => [
-                Number(k),
-                v as 'strong' | 'developing' | 'needs_support',
-              ])
-            )
-            setExerciseAssessments(assessmentsMap)
-            console.log('Restored exercise assessments:', assessmentsMap)
-          }
-        } catch (err) {
-          console.error('Failed to load saved progress:', err)
-        }
-      }
-      // Mark that we've completed the initial load
-      setIsInitialLoad(false)
-    }
-  }, [params.id])
-
-  // Persist state to localStorage whenever it changes (but not on initial load)
-  useEffect(() => {
-    if (params.id && !isInitialLoad) {
-      const storageKey = `module_${params.id}_progress`
-      const dataToSave = {
-        completedExercises: Array.from(completedExercises),
-        exerciseResponses: Object.fromEntries(exerciseResponses),
-        exerciseHints: Object.fromEntries(exerciseHints),
-        exerciseHintMessages: Object.fromEntries(exerciseHintMessages),
-        exerciseAssessments: Object.fromEntries(exerciseAssessments),
-      }
-      console.log('Persisting progress for module', params.id, ':', dataToSave)
-      localStorage.setItem(storageKey, JSON.stringify(dataToSave))
-    }
-  }, [
-    params.id,
+  // Use custom hook for progress management with localStorage persistence
+  const {
     completedExercises,
     exerciseResponses,
     exerciseHints,
     exerciseHintMessages,
     exerciseAssessments,
-    isInitialLoad,
-  ])
+    isLoading: isProgressLoading,
+    completeExercise,
+    saveResponse,
+    saveHints,
+    saveHintMessage,
+    saveAssessment,
+  } = useModuleProgress(params.id as string)
 
   useEffect(() => {
     const fetchModule = async () => {
@@ -214,10 +119,8 @@ export default function ModulePage() {
       // Otherwise, show the next incomplete exercise
       if (nextExercise >= totalExercises) {
         setCurrentExerciseIndex(totalExercises - 1)
-        console.log('All exercises completed, showing last exercise:', totalExercises - 1)
       } else {
         setCurrentExerciseIndex(nextExercise)
-        console.log('Setting current exercise to next incomplete:', nextExercise)
       }
     }
   }, [module, completedExercises.size]) // Only run when module loads or completedExercises size changes
@@ -226,7 +129,6 @@ export default function ModulePage() {
   useEffect(() => {
     const savedHints = exerciseHints.get(currentExerciseIndex) || 0
     setHintsUsed(savedHints)
-    console.log('Restored hints for exercise', currentExerciseIndex, ':', savedHints)
 
     const savedHintMessages = exerciseHintMessages.get(currentExerciseIndex) || []
     // Only update exercise messages if they are currently empty or only contain hints
@@ -235,13 +137,6 @@ export default function ModulePage() {
       const hasFeedback = prev.some((msg) => msg.type === 'feedback')
       return hasFeedback ? prev : savedHintMessages
     })
-    console.log(
-      'Restored hint messages for exercise',
-      currentExerciseIndex,
-      ':',
-      savedHintMessages.length,
-      'messages'
-    )
   }, [currentExerciseIndex, exerciseHints, exerciseHintMessages])
 
   const currentExercise = module?.exercises?.[currentExerciseIndex]
@@ -262,26 +157,10 @@ export default function ModulePage() {
       setHintsUsed(response.hint_level)
 
       // Persist hints used for this exercise
-      setExerciseHints((prev) => {
-        const newMap = new Map(prev)
-        newMap.set(currentExerciseIndex, response.hint_level)
-        console.log(
-          'Saving hints used for exercise',
-          currentExerciseIndex,
-          ':',
-          response.hint_level
-        )
-        return newMap
-      })
+      saveHints(currentExerciseIndex, response.hint_level)
 
       // Persist hint messages for this exercise
-      setExerciseHintMessages((prev) => {
-        const newMap = new Map(prev)
-        const currentMessages = newMap.get(currentExerciseIndex) || []
-        newMap.set(currentExerciseIndex, [...currentMessages, newMessage])
-        console.log('Saving hint message for exercise', currentExerciseIndex)
-        return newMap
-      })
+      saveHintMessage(currentExerciseIndex, newMessage)
 
       // Switch to editor tab on mobile to show hint
       if (window.innerWidth < 640) {
@@ -319,34 +198,14 @@ export default function ModulePage() {
 
       // Save the submitted answer (for all submissions, not just successful ones)
       if (submittedAnswer.trim()) {
-        setExerciseResponses((prev) => {
-          const newMap = new Map(prev)
-          newMap.set(currentExerciseIndex, submittedAnswer)
-          console.log(
-            'Saving answer for exercise',
-            currentExerciseIndex,
-            ':',
-            submittedAnswer.substring(0, 50)
-          )
-          return newMap
-        })
+        saveResponse(currentExerciseIndex, submittedAnswer)
       }
 
       // Save the assessment quality for celebration UI
       setLastAssessment(response.assessment)
 
       // Save the assessment for this exercise
-      setExerciseAssessments((prev) => {
-        const newMap = new Map(prev)
-        newMap.set(currentExerciseIndex, response.assessment)
-        console.log(
-          'Saving assessment for exercise',
-          currentExerciseIndex,
-          ':',
-          response.assessment
-        )
-        return newMap
-      })
+      saveAssessment(currentExerciseIndex, response.assessment)
 
       // Show Continue button after first submission
       setShowContinueButton(true)
@@ -383,7 +242,7 @@ export default function ModulePage() {
 
   const advanceToNextExercise = () => {
     // Mark current exercise as completed before advancing
-    setCompletedExercises((prev) => new Set([...prev, currentExerciseIndex]))
+    completeExercise(currentExerciseIndex)
 
     if (currentExerciseIndex < totalExercises - 1) {
       // Move to next exercise
@@ -419,18 +278,10 @@ export default function ModulePage() {
     // Restore hints used for this exercise from persisted data
     const savedHints = exerciseHints.get(targetExercise) || 0
     setHintsUsed(savedHints)
-    console.log('Restored hints for exercise', targetExercise, ':', savedHints)
 
     // Restore hint messages for this exercise
     const savedHintMessages = exerciseHintMessages.get(targetExercise) || []
     setExerciseMessages(savedHintMessages)
-    console.log(
-      'Restored hint messages for exercise',
-      targetExercise,
-      ':',
-      savedHintMessages.length,
-      'messages'
-    )
 
     // Reset UI state
     setShowContinueButton(false)
@@ -455,125 +306,26 @@ export default function ModulePage() {
   const renderExercise = (exercise: Exercise) => {
     return (
       <div className="space-y-4 sm:space-y-5">
-        {/* Exercise-specific content */}
         {exercise.type === 'analysis' && exercise.material && (
-          <div className="animate-fadeInUp rounded-xl border-2 border-primary-500 bg-white p-6 sm:p-8">
-            {/* Exercise Prompt (Instructions) */}
-            <div className="mb-6">
-              <p className="whitespace-pre-wrap text-base leading-relaxed text-neutral-900 sm:text-lg">
-                <span className="font-semibold">Your Task: </span>
-                {exercise.prompt}
-              </p>
-            </div>
-
-            {/* Material to Analyze */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold uppercase tracking-wider text-neutral-700">
-                Material to Analyze
-              </h4>
-              <div className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-900">
-                {exercise.material}
-              </div>
-            </div>
-          </div>
+          <AnalysisExercise prompt={exercise.prompt} material={exercise.material} />
         )}
 
         {exercise.type === 'comparative' && exercise.options && (
-          <div className="animate-fadeInUp rounded-xl border-2 border-primary-500 bg-white p-6 sm:p-8">
-            {/* Exercise Prompt (Instructions) */}
-            <div className="mb-6">
-              <p className="whitespace-pre-wrap text-base leading-relaxed text-neutral-900 sm:text-lg">
-                <span className="font-semibold">Your Task: </span>
-                {exercise.prompt}
-              </p>
-            </div>
-
-            {/* Options to Compare */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold uppercase tracking-wider text-neutral-700">
-                Options to Compare
-              </h4>
-              <ul className="space-y-3">
-                {exercise.options.map((option, idx) => (
-                  <li
-                    key={idx}
-                    className={`animate-slideInRight flex items-start gap-3 rounded-lg border border-cream-200 bg-cream-50 p-3.5 stagger-${Math.min(idx + 1, 5)}`}
-                  >
-                    <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-600 text-xs font-bold text-white shadow-md ring-2 ring-primary-200">
-                      {idx + 1}
-                    </span>
-                    <span className="text-sm font-medium leading-relaxed text-neutral-900">
-                      {option}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <ComparativeExercise prompt={exercise.prompt} options={exercise.options} />
         )}
 
         {exercise.type === 'framework' && (
-          <div className="animate-fadeInUp rounded-xl border-2 border-primary-500 bg-white p-6 sm:p-8">
-            {/* Exercise Prompt (Instructions) */}
-            <div className="mb-6">
-              <p className="whitespace-pre-wrap text-base leading-relaxed text-neutral-900 sm:text-lg">
-                <span className="font-semibold">Your Task: </span>
-                {exercise.prompt}
-              </p>
-            </div>
-
-            {/* Task Materials Section */}
-            <div className="space-y-5">
-              {exercise.scaffold && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold uppercase tracking-wider text-neutral-700">
-                    Framework Structure
-                  </h4>
-                  <div className="space-y-3">
-                    {Object.entries(exercise.scaffold).map(([key, value], idx) => (
-                      <div
-                        key={key}
-                        className={`animate-slideInRight group/item relative overflow-hidden rounded-lg border-l-4 border-primary-500 bg-cream-50 p-4 stagger-${Math.min(idx + 1, 5)}`}
-                      >
-                        <div className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-primary-50 text-xs font-bold text-primary-700">
-                          {idx + 1}
-                        </div>
-                        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary-800">
-                          <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                              fillRule="evenodd"
-                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                          {key}
-                        </div>
-                        <div className="pr-10 text-sm leading-relaxed text-neutral-800">
-                          {value}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {exercise.material && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold uppercase tracking-wider text-neutral-700">
-                    Reference Material
-                  </h4>
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-900">
-                    {exercise.material}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <FrameworkExercise
+            prompt={exercise.prompt}
+            scaffold={exercise.scaffold}
+            material={exercise.material}
+          />
         )}
       </div>
     )
   }
 
-  if (loading) {
+  if (loading || isProgressLoading) {
     return (
       <ProtectedRoute>
         <div className="flex min-h-screen items-center justify-center bg-cream-100">
@@ -783,89 +535,14 @@ export default function ModulePage() {
                   </div>
 
                   {/* Interactive Progress Navigator - At bottom of card */}
-                  {module?.exercises && module.exercises.length > 0 && (
-                    <div className="flex-shrink-0 bg-gradient-to-b from-cream-100/60 to-cream-200/40 px-5 py-4 sm:px-6 sm:py-4 lg:px-8">
-                      {/* Interactive Exercise Dots */}
-                      <div
-                        className="flex items-center justify-center gap-3"
-                        role="navigation"
-                        aria-label="Exercise navigation"
-                      >
-                        {module.exercises.map((exercise, index) => {
-                          const isCompleted = completedExercises.has(index)
-                          const isCurrent = index === currentExerciseIndex
-                          // Unlock if completed, current, or if previous exercise is completed
-                          const isPreviousCompleted = index > 0 && completedExercises.has(index - 1)
-                          const isUnlocked = isCompleted || isCurrent || isPreviousCompleted
-                          const isJustUnlocked = justUnlockedExercise === index
-                          const assessment = exerciseAssessments.get(index)
-                          const hasAttempted = assessment !== undefined
-
-                          // Determine button styling based on state and assessment
-                          const getButtonStyles = () => {
-                            if (isCurrent) {
-                              // Current exercise: keep primary orange styling with a subtle ring
-                              return 'border-primary-500 bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg scale-110 ring-2 ring-primary-300 ring-offset-2'
-                            } else if (hasAttempted) {
-                              // Has been attempted: color based on assessment
-                              if (assessment === 'strong') {
-                                return 'border-green-400 bg-gradient-to-br from-green-100 to-green-50 text-green-700 hover:scale-105 hover:border-green-500 hover:shadow-md cursor-pointer'
-                              } else if (assessment === 'developing') {
-                                return 'border-yellow-400 bg-gradient-to-br from-yellow-100 to-yellow-50 text-yellow-700 hover:scale-105 hover:border-yellow-500 hover:shadow-md cursor-pointer'
-                              } else if (assessment === 'needs_support') {
-                                return 'border-primary-400 bg-gradient-to-br from-primary-100 to-primary-50 text-primary-700 hover:scale-105 hover:border-primary-500 hover:shadow-md cursor-pointer'
-                              }
-                            } else if (isUnlocked) {
-                              // Unlocked but not attempted
-                              return 'border-neutral-400 bg-gradient-to-br from-neutral-50 to-cream-100 text-neutral-700 hover:scale-105 hover:border-primary-400 hover:shadow-md cursor-pointer'
-                            }
-                            // Locked
-                            return 'border-cream-300 bg-cream-200 text-neutral-400 cursor-not-allowed opacity-50'
-                          }
-
-                          return (
-                            <button
-                              key={`${exercise.id}-${index}`}
-                              onClick={() => navigateToExercise(index)}
-                              disabled={!isUnlocked}
-                              aria-label={`${isUnlocked ? 'Go to' : 'Locked'} exercise ${index + 1}${isCurrent ? ' (current)' : ''}${isCompleted ? ' (completed)' : ''}`}
-                              aria-current={isCurrent ? 'step' : undefined}
-                              className={`group relative flex h-10 w-10 items-center justify-center rounded-full border-2 font-bold text-xs transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-cream-100 ${getButtonStyles()} ${isJustUnlocked ? 'animate-pulse-glow animate-scaleIn' : ''}`}
-                            >
-                              {isCompleted && !isCurrent ? (
-                                // Checkmark for completed exercises
-                                <svg
-                                  className="h-5 w-5"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                  aria-hidden="true"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              ) : (
-                                // Exercise number
-                                <span>{index + 1}</span>
-                              )}
-
-                              {/* Tooltip on hover */}
-                              {isUnlocked && (
-                                <div className="pointer-events-none absolute bottom-full mb-2 hidden whitespace-nowrap rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 sm:block">
-                                  Exercise {index + 1}: {exercise.name}
-                                  {isCurrent && <span className="ml-1">(Current)</span>}
-                                  {isCompleted && !isCurrent && <span className="ml-1">✓</span>}
-                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-neutral-900"></div>
-                                </div>
-                              )}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
+                  <ExerciseProgressNavigator
+                    exercises={module?.exercises || []}
+                    currentExerciseIndex={currentExerciseIndex}
+                    completedExercises={completedExercises}
+                    exerciseAssessments={exerciseAssessments}
+                    justUnlockedExercise={justUnlockedExercise}
+                    onNavigate={navigateToExercise}
+                  />
                 </div>
               )}
             </div>
@@ -885,54 +562,13 @@ export default function ModulePage() {
                     sessionId={sessionId}
                     hintsUsed={hintsUsed}
                     onSubmitSuccess={handleSubmitSuccess}
-                    initialAnswer={(() => {
-                      const savedAnswer = exerciseResponses.get(currentExerciseIndex) || ''
-                      console.log(
-                        'AnswerSubmission initialAnswer for exercise',
-                        currentExerciseIndex,
-                        ':',
-                        savedAnswer.substring(0, 50)
-                      )
-                      return savedAnswer
-                    })()}
+                    initialAnswer={exerciseResponses.get(currentExerciseIndex) || ''}
                     renderFeedback={() => (
                       <>
                         {exerciseMessages.length > 0 && (
                           <div className="relative mb-4 space-y-3 sm:mb-6">
                             {/* Celebration Animation Overlay - appears over feedback */}
-                            {showCelebration && (
-                              <div
-                                className="pointer-events-none absolute inset-0 z-10 overflow-hidden rounded-lg"
-                                role="status"
-                                aria-live="polite"
-                                aria-label="Next exercise unlocked"
-                              >
-                                {/* Confetti particles */}
-                                <div className="absolute inset-0">
-                                  {[...Array(20)].map((_, i) => (
-                                    <div
-                                      key={i}
-                                      className="confetti-particle absolute"
-                                      style={{
-                                        left: `${Math.random() * 100}%`,
-                                        top: '-10%',
-                                        width: `${Math.random() * 8 + 4}px`,
-                                        height: `${Math.random() * 8 + 4}px`,
-                                        backgroundColor: [
-                                          '#d97757',
-                                          '#f1875e',
-                                          '#f7b099',
-                                          '#fbd2c3',
-                                        ][Math.floor(Math.random() * 4)],
-                                        animationDelay: `${Math.random() * 0.5}s`,
-                                        animationDuration: `${Math.random() * 2 + 2.5}s`,
-                                        transform: `rotate(${Math.random() * 360}deg)`,
-                                      }}
-                                    />
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                            <CelebrationConfetti show={showCelebration} />
 
                             {exerciseMessages.map((message, idx) => (
                               <div
