@@ -18,7 +18,10 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'", // unsafe-inline needed for styled components and Tailwind
               "img-src 'self' data: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' " + (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'),
+              "connect-src 'self' " +
+                (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000') +
+                ' ' +
+                (process.env.NEXT_PUBLIC_SUPABASE_URL || ''),
               "frame-ancestors 'none'", // Prevent clickjacking
               "base-uri 'self'",
               "form-action 'self'",
