@@ -34,7 +34,9 @@ describe('AnswerSubmission', () => {
         />
       )
 
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
       expect(submitButton).toBeDisabled()
     })
 
@@ -52,7 +54,9 @@ describe('AnswerSubmission', () => {
       const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'This is my answer')
 
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
       expect(submitButton).toBeEnabled()
     })
 
@@ -70,7 +74,9 @@ describe('AnswerSubmission', () => {
       const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, '   ')
 
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
       expect(submitButton).toBeDisabled()
     })
   })
@@ -91,7 +97,9 @@ describe('AnswerSubmission', () => {
       const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'This is my comprehensive answer')
 
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
       await user.click(submitButton)
 
       await waitFor(() => {
@@ -125,7 +133,9 @@ describe('AnswerSubmission', () => {
       const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
       await user.click(submitButton)
 
       // Should show loading state while promise is pending
@@ -153,7 +163,9 @@ describe('AnswerSubmission', () => {
       const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
       await user.click(submitButton)
 
       await waitFor(() => {
@@ -179,7 +191,9 @@ describe('AnswerSubmission', () => {
       await user.type(textarea, 'My answer')
       expect(textarea.value).toBe('My answer')
 
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
       await user.click(submitButton)
 
       await waitFor(() => {
@@ -207,7 +221,9 @@ describe('AnswerSubmission', () => {
       const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
       await user.click(submitButton)
 
       await waitFor(
@@ -236,7 +252,9 @@ describe('AnswerSubmission', () => {
       const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
 
       // First attempt - fails
       await user.click(submitButton)
@@ -274,7 +292,9 @@ describe('AnswerSubmission', () => {
       }) as HTMLTextAreaElement
       await user.type(textarea, 'My answer')
 
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
       await user.click(submitButton)
 
       await waitFor(
@@ -303,7 +323,9 @@ describe('AnswerSubmission', () => {
       const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
       await user.click(submitButton)
 
       await waitFor(() => {
@@ -352,7 +374,9 @@ describe('AnswerSubmission', () => {
       const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
       await user.click(submitButton)
 
       // Should have status region for screen readers
@@ -372,7 +396,9 @@ describe('AnswerSubmission', () => {
       )
 
       const textarea = screen.getByRole('textbox', { name: /workspace/i })
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
 
       // Type answer
       await user.type(textarea, 'My answer')
@@ -401,7 +427,9 @@ describe('AnswerSubmission', () => {
       const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
 
       // Click multiple times rapidly
       user.click(submitButton)

@@ -52,7 +52,9 @@ describe('SignupPage', () => {
 
     fireEvent.change(emailInput, { target: { value: 'newuser@example.com' } })
     fireEvent.change(passwordInput, { target: { value: 'password123' } })
-    fireEvent.change(confirmPasswordInput, { target: { value: 'password123' } })
+    fireEvent.change(confirmPasswordInput, {
+      target: { value: 'password123' },
+    })
     fireEvent.click(submitButton)
 
     await waitFor(() => {
@@ -80,7 +82,9 @@ describe('SignupPage', () => {
 
     fireEvent.change(emailInput, { target: { value: 'newuser@example.com' } })
     fireEvent.change(passwordInput, { target: { value: 'password123' } })
-    fireEvent.change(confirmPasswordInput, { target: { value: 'password123' } })
+    fireEvent.change(confirmPasswordInput, {
+      target: { value: 'password123' },
+    })
     fireEvent.click(submitButton)
 
     await waitFor(() => {
@@ -99,7 +103,9 @@ describe('SignupPage', () => {
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
     fireEvent.change(passwordInput, { target: { value: 'password123' } })
-    fireEvent.change(confirmPasswordInput, { target: { value: 'different123' } })
+    fireEvent.change(confirmPasswordInput, {
+      target: { value: 'different123' },
+    })
     fireEvent.click(submitButton)
 
     await waitFor(() => {
@@ -140,7 +146,9 @@ describe('SignupPage', () => {
 
     fireEvent.change(emailInput, { target: { value: 'existing@example.com' } })
     fireEvent.change(passwordInput, { target: { value: 'password123' } })
-    fireEvent.change(confirmPasswordInput, { target: { value: 'password123' } })
+    fireEvent.change(confirmPasswordInput, {
+      target: { value: 'password123' },
+    })
     fireEvent.click(submitButton)
 
     await waitFor(() => {

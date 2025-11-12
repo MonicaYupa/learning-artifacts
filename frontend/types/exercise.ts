@@ -1,12 +1,20 @@
-export interface ExerciseMessage {
-  id: string
-  type: 'hint' | 'feedback'
-  content: string
-  timestamp: Date
-  assessment?: 'strong' | 'developing' | 'needs_support'
-  attemptNumber?: number
-  modelAnswer?: string
-}
+// Discriminated union for better type safety
+export type ExerciseMessage =
+  | {
+      id: string
+      type: 'hint'
+      content: string
+      timestamp: Date
+    }
+  | {
+      id: string
+      type: 'feedback'
+      content: string
+      timestamp: Date
+      assessment: 'strong' | 'developing' | 'needs_support'
+      attemptNumber: number
+      modelAnswer?: string
+    }
 
 export interface Exercise {
   id: string

@@ -62,9 +62,9 @@ function WorkspacePanel() {
                         {message.type === 'feedback' && (
                           <div className="ring-2 ring-primary-400/20 rounded-lg">
                             <FeedbackDisplay
-                              assessment={message.assessment!}
+                              assessment={message.assessment}
                               feedback={message.content}
-                              attemptNumber={message.attemptNumber!}
+                              attemptNumber={message.attemptNumber}
                               modelAnswer={message.modelAnswer}
                             />
                           </div>

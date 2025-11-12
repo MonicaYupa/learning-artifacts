@@ -56,7 +56,9 @@ describe('Exercise Flow Integration Tests', () => {
       )
 
       // Check that navigation shows all exercises
-      const navigator = screen.getByRole('navigation', { name: /exercise navigation/i })
+      const navigator = screen.getByRole('navigation', {
+        name: /exercise navigation/i,
+      })
       expect(navigator).toBeInTheDocument()
     })
   })
@@ -75,7 +77,9 @@ describe('Exercise Flow Integration Tests', () => {
         </MockModuleProvider>
       )
 
-      const hintButton = screen.getByRole('button', { name: /all hints used/i })
+      const hintButton = screen.getByRole('button', {
+        name: /all hints used/i,
+      })
       expect(hintButton).toBeDisabled()
     })
   })
@@ -97,7 +101,9 @@ describe('Exercise Flow Integration Tests', () => {
       )
 
       const textarea = screen.getByPlaceholderText(/type your answer here/i)
-      const submitButton = screen.getByRole('button', { name: /submit answer/i })
+      const submitButton = screen.getByRole('button', {
+        name: /submit answer/i,
+      })
 
       // Initially submit button should be disabled (empty answer)
       expect(submitButton).toBeDisabled()
@@ -181,7 +187,9 @@ describe('Exercise Flow Integration Tests', () => {
       )
 
       // Try to navigate to completed exercise (should work)
-      const exerciseButtons = screen.getAllByRole('button', { name: /exercise/i })
+      const exerciseButtons = screen.getAllByRole('button', {
+        name: /exercise/i,
+      })
       if (exerciseButtons.length > 0) {
         await user.click(exerciseButtons[0])
         // Navigation function would be called if we had the full component structure

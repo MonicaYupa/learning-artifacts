@@ -121,7 +121,9 @@ describe('ErrorBoundary', () => {
         </ErrorBoundary>
       )
 
-      const goHomeButton = screen.getByRole('button', { name: 'Go to home page' })
+      const goHomeButton = screen.getByRole('button', {
+        name: 'Go to home page',
+      })
       expect(goHomeButton).toBeInTheDocument()
       expect(goHomeButton).toHaveTextContent('Go Home')
     })
@@ -136,7 +138,9 @@ describe('ErrorBoundary', () => {
         </ErrorBoundary>
       )
 
-      const goHomeButton = screen.getByRole('button', { name: 'Go to home page' })
+      const goHomeButton = screen.getByRole('button', {
+        name: 'Go to home page',
+      })
       fireEvent.click(goHomeButton)
 
       // href will be absolute URL in jsdom environment
