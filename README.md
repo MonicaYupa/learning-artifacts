@@ -1,6 +1,6 @@
 # Learning Artifacts
 
-An AI-powered learning platform that promotes skill development through interactive, progressive exercises. Users input topics, receive Claude-generated modules, and build real expertise through active practice with AI feedback.
+A Claude-powered feature that promotes skill development through interactive, progressive exercises. Users input topics, receive Claude-generated learning modules, and build real expertise through active practice with AI feedback.
 
 ## Purpose
 
