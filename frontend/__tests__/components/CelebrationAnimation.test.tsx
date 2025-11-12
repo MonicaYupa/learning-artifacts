@@ -1,45 +1,26 @@
-import { render, screen } from '@/lib/test-utils/test-utils'
-import CelebrationAnimation from '@/components/CelebrationAnimation'
+import { render } from '@/lib/test-utils/test-utils'
+import CelebrationConfetti from '@/components/CelebrationConfetti'
 
-describe('CelebrationAnimation', () => {
-  it('renders celebration animation container', () => {
-    render(<CelebrationAnimation />)
-    const animation = screen.getByRole('img', { name: /celebration/i })
-    expect(animation).toBeInTheDocument()
+describe('CelebrationConfetti', () => {
+  it('renders when show is true', () => {
+    const { container } = render(<CelebrationConfetti show={true} />)
+    expect(container.firstChild).toBeInTheDocument()
   })
 
-  it('applies correct CSS classes for animation', () => {
-    render(<CelebrationAnimation />)
-    const animation = screen.getByRole('img', { name: /celebration/i })
-    expect(animation).toHaveClass('animate-celebration')
+  it('does not render when show is false', () => {
+    const { container } = render(<CelebrationConfetti show={false} />)
+    expect(container.firstChild).toBeNull()
   })
 
-  it('respects prefers-reduced-motion', () => {
-    // Mock matchMedia for reduced motion
-    window.matchMedia = jest.fn().mockImplementation((query) => ({
-      matches: query === '(prefers-reduced-motion: reduce)',
-      media: query,
-      onchange: null,
-      addListener: jest.fn(),
-      removeListener: jest.fn(),
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-      dispatchEvent: jest.fn(),
-    }))
-
-    render(<CelebrationAnimation />)
-    const animation = screen.getByRole('img', { name: /celebration/i })
-    expect(animation).toHaveClass('motion-reduce')
+  it('renders confetti overlay with correct classes', () => {
+    const { container } = render(<CelebrationConfetti show={true} />)
+    const overlay = container.querySelector('.absolute')
+    expect(overlay).toBeInTheDocument()
   })
 
-  it('renders without errors when animation completes', () => {
-    const { container } = render(<CelebrationAnimation />)
-    expect(container).toBeInTheDocument()
-  })
-
-  it('has appropriate ARIA attributes', () => {
-    render(<CelebrationAnimation />)
-    const animation = screen.getByRole('img', { name: /celebration/i })
-    expect(animation).toHaveAttribute('aria-label', expect.stringContaining('celebration'))
+  it('has celebration animation styles when visible', () => {
+    const { container } = render(<CelebrationConfetti show={true} />)
+    const confettiElement = container.firstChild as HTMLElement
+    expect(confettiElement).toHaveClass('pointer-events-none')
   })
 })

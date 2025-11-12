@@ -42,10 +42,12 @@ export default function AnswerSubmission({
   }, [initialAnswer])
 
   const isAnswerEmpty = answer.trim().length === 0
+  const isSubmittingRef = useRef(false)
 
   const handleSubmit = async () => {
-    if (isSubmitting || isAnswerEmpty) return
+    if (isSubmitting || isAnswerEmpty || isSubmittingRef.current) return
 
+    isSubmittingRef.current = true
     setIsSubmitting(true)
     setError(null)
 
@@ -77,6 +79,7 @@ export default function AnswerSubmission({
       setError(errorMessage)
     } finally {
       setIsSubmitting(false)
+      isSubmittingRef.current = false
     }
   }
 

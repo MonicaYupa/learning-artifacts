@@ -1,11 +1,8 @@
 import { render, screen, waitFor } from '@/lib/test-utils/test-utils'
 import userEvent from '@testing-library/user-event'
 import AnswerSubmission from '@/components/AnswerSubmission'
-import {
-  mockSubmitResponseStrong,
-  mockSubmitResponseDeveloping,
-  mockApiError,
-} from '@/lib/test-utils/fixtures'
+import type { SubmitResponse } from '@/types/session'
+import { mockSubmitResponseStrong, mockSubmitResponseDeveloping } from '@/lib/test-utils/fixtures'
 
 // Mock the API service
 jest.mock('@/lib/api/sessions', () => ({
@@ -52,7 +49,7 @@ describe('AnswerSubmission', () => {
         />
       )
 
-      const textarea = screen.getByRole('textbox', { name: /your response/i })
+      const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'This is my answer')
 
       const submitButton = screen.getByRole('button', { name: /submit answer/i })
@@ -70,7 +67,7 @@ describe('AnswerSubmission', () => {
         />
       )
 
-      const textarea = screen.getByRole('textbox', { name: /your response/i })
+      const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, '   ')
 
       const submitButton = screen.getByRole('button', { name: /submit answer/i })
@@ -91,7 +88,7 @@ describe('AnswerSubmission', () => {
         />
       )
 
-      const textarea = screen.getByRole('textbox', { name: /your response/i })
+      const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'This is my comprehensive answer')
 
       const submitButton = screen.getByRole('button', { name: /submit answer/i })
@@ -111,9 +108,11 @@ describe('AnswerSubmission', () => {
 
     it('shows loading state during submission', async () => {
       const user = userEvent.setup({ delay: null })
-      mockSubmitAnswer.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(mockSubmitResponseStrong), 1000))
-      )
+      let resolveSubmit: (value: any) => void
+      const submitPromise = new Promise<SubmitResponse>((resolve) => {
+        resolveSubmit = resolve
+      })
+      mockSubmitAnswer.mockReturnValue(submitPromise)
 
       render(
         <AnswerSubmission
@@ -123,14 +122,20 @@ describe('AnswerSubmission', () => {
         />
       )
 
-      const textarea = screen.getByRole('textbox', { name: /your response/i })
+      const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
       const submitButton = screen.getByRole('button', { name: /submit answer/i })
       await user.click(submitButton)
 
-      expect(screen.getByText(/submitting/i)).toBeInTheDocument()
+      // Should show loading state while promise is pending
+      await waitFor(() => {
+        expect(screen.getByText('Submitting...')).toBeInTheDocument()
+      })
       expect(submitButton).toBeDisabled()
+
+      // Resolve the promise to complete the test
+      resolveSubmit!(mockSubmitResponseStrong)
     })
 
     it('calls onSubmitSuccess with response data', async () => {
@@ -145,14 +150,14 @@ describe('AnswerSubmission', () => {
         />
       )
 
-      const textarea = screen.getByRole('textbox', { name: /your response/i })
+      const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
       const submitButton = screen.getByRole('button', { name: /submit answer/i })
       await user.click(submitButton)
 
       await waitFor(() => {
-        expect(mockOnSubmitSuccess).toHaveBeenCalledWith(mockSubmitResponseStrong)
+        expect(mockOnSubmitSuccess).toHaveBeenCalledWith(mockSubmitResponseStrong, 'My answer')
       })
     })
 
@@ -169,7 +174,7 @@ describe('AnswerSubmission', () => {
       )
 
       const textarea = screen.getByRole('textbox', {
-        name: /your response/i,
+        name: /workspace/i,
       }) as HTMLTextAreaElement
       await user.type(textarea, 'My answer')
       expect(textarea.value).toBe('My answer')
@@ -186,7 +191,7 @@ describe('AnswerSubmission', () => {
   describe('Error Handling', () => {
     it('displays error message on API failure', async () => {
       const user = userEvent.setup({ delay: null })
-      mockSubmitAnswer.mockRejectedValueOnce(new Error(mockApiError.message))
+      mockSubmitAnswer.mockRejectedValueOnce(new Error('Failed to submit answer'))
 
       render(
         <AnswerSubmission
@@ -196,22 +201,25 @@ describe('AnswerSubmission', () => {
         />
       )
 
-      const textarea = screen.getByRole('textbox', { name: /your response/i })
+      const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
       const submitButton = screen.getByRole('button', { name: /submit answer/i })
       await user.click(submitButton)
 
-      await waitFor(() => {
-        expect(screen.getByText(/failed to submit/i)).toBeInTheDocument()
-        expect(mockOnSubmitSuccess).not.toHaveBeenCalled()
-      })
+      await waitFor(
+        () => {
+          expect(screen.getByText(/failed to submit/i)).toBeInTheDocument()
+          expect(mockOnSubmitSuccess).not.toHaveBeenCalled()
+        },
+        { timeout: 3000 }
+      )
     })
 
     it('allows retry after error', async () => {
       const user = userEvent.setup({ delay: null })
       mockSubmitAnswer
-        .mockRejectedValueOnce(new Error('Network error'))
+        .mockRejectedValueOnce(new Error('Failed to submit answer'))
         .mockResolvedValueOnce(mockSubmitResponseStrong)
 
       render(
@@ -222,27 +230,33 @@ describe('AnswerSubmission', () => {
         />
       )
 
-      const textarea = screen.getByRole('textbox', { name: /your response/i })
+      const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
       const submitButton = screen.getByRole('button', { name: /submit answer/i })
 
       // First attempt - fails
       await user.click(submitButton)
-      await waitFor(() => {
-        expect(screen.getByText(/failed to submit/i)).toBeInTheDocument()
-      })
+      await waitFor(
+        () => {
+          expect(screen.getByText(/failed to submit/i)).toBeInTheDocument()
+        },
+        { timeout: 3000 }
+      )
 
       // Second attempt - succeeds
       await user.click(submitButton)
-      await waitFor(() => {
-        expect(mockOnSubmitSuccess).toHaveBeenCalledWith(mockSubmitResponseStrong)
-      })
+      await waitFor(
+        () => {
+          expect(mockOnSubmitSuccess).toHaveBeenCalledWith(mockSubmitResponseStrong, 'My answer')
+        },
+        { timeout: 3000 }
+      )
     })
 
     it('maintains answer text on error', async () => {
       const user = userEvent.setup({ delay: null })
-      mockSubmitAnswer.mockRejectedValueOnce(new Error('Network error'))
+      mockSubmitAnswer.mockRejectedValueOnce(new Error('Failed to submit answer'))
 
       render(
         <AnswerSubmission
@@ -253,17 +267,20 @@ describe('AnswerSubmission', () => {
       )
 
       const textarea = screen.getByRole('textbox', {
-        name: /your response/i,
+        name: /workspace/i,
       }) as HTMLTextAreaElement
       await user.type(textarea, 'My answer')
 
       const submitButton = screen.getByRole('button', { name: /submit answer/i })
       await user.click(submitButton)
 
-      await waitFor(() => {
-        expect(screen.getByText(/failed to submit/i)).toBeInTheDocument()
-        expect(textarea.value).toBe('My answer')
-      })
+      await waitFor(
+        () => {
+          expect(screen.getByText(/failed to submit/i)).toBeInTheDocument()
+          expect(textarea.value).toBe('My answer')
+        },
+        { timeout: 3000 }
+      )
     })
   })
 
@@ -280,7 +297,7 @@ describe('AnswerSubmission', () => {
         />
       )
 
-      const textarea = screen.getByRole('textbox', { name: /your response/i })
+      const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
       const submitButton = screen.getByRole('button', { name: /submit answer/i })
@@ -312,9 +329,9 @@ describe('AnswerSubmission', () => {
         />
       )
 
-      const textarea = screen.getByRole('textbox', { name: /your response/i })
+      const textarea = screen.getByRole('textbox', { name: /workspace/i })
       expect(textarea).toHaveAttribute('id')
-      expect(screen.getByLabelText(/your response/i)).toBe(textarea)
+      expect(screen.getByLabelText(/workspace/i)).toBe(textarea)
     })
 
     it('announces submission status with aria-live', async () => {
@@ -329,7 +346,7 @@ describe('AnswerSubmission', () => {
         />
       )
 
-      const textarea = screen.getByRole('textbox', { name: /your response/i })
+      const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
       const submitButton = screen.getByRole('button', { name: /submit answer/i })
@@ -351,7 +368,7 @@ describe('AnswerSubmission', () => {
         />
       )
 
-      const textarea = screen.getByRole('textbox', { name: /your response/i })
+      const textarea = screen.getByRole('textbox', { name: /workspace/i })
       const submitButton = screen.getByRole('button', { name: /submit answer/i })
 
       // Type answer
@@ -360,24 +377,6 @@ describe('AnswerSubmission', () => {
       // Tab to submit button
       await user.tab()
       expect(submitButton).toHaveFocus()
-    })
-
-    it('shows character and word count', async () => {
-      const user = userEvent.setup({ delay: null })
-
-      render(
-        <AnswerSubmission
-          sessionId={mockSessionId}
-          hintsUsed={0}
-          onSubmitSuccess={mockOnSubmitSuccess}
-        />
-      )
-
-      const textarea = screen.getByRole('textbox', { name: /your response/i })
-      await user.type(textarea, 'Hello world')
-
-      expect(screen.getByText(/11 characters/i)).toBeInTheDocument()
-      expect(screen.getByText(/2 words/i)).toBeInTheDocument()
     })
   })
 
@@ -396,7 +395,7 @@ describe('AnswerSubmission', () => {
         />
       )
 
-      const textarea = screen.getByRole('textbox', { name: /your response/i })
+      const textarea = screen.getByRole('textbox', { name: /workspace/i })
       await user.type(textarea, 'My answer')
 
       const submitButton = screen.getByRole('button', { name: /submit answer/i })

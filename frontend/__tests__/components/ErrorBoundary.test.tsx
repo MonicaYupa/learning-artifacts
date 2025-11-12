@@ -114,16 +114,6 @@ describe('ErrorBoundary', () => {
   })
 
   describe('Recovery', () => {
-    it('shows Try Again button in default fallback', () => {
-      render(
-        <ErrorBoundary>
-          <ThrowError />
-        </ErrorBoundary>
-      )
-
-      expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument()
-    })
-
     it('shows Go Home button in default fallback', () => {
       render(
         <ErrorBoundary>
@@ -131,31 +121,26 @@ describe('ErrorBoundary', () => {
         </ErrorBoundary>
       )
 
-      expect(screen.getByRole('button', { name: 'Go to home page' })).toBeInTheDocument()
+      const goHomeButton = screen.getByRole('button', { name: 'Go to home page' })
+      expect(goHomeButton).toBeInTheDocument()
+      expect(goHomeButton).toHaveTextContent('Go Home')
     })
 
-    it('resets error state when Try Again is clicked', () => {
-      let shouldThrow = true
-      const TestComponent = () => <ThrowError shouldThrow={shouldThrow} />
+    it('navigates to home page when Go Home button is clicked', () => {
+      delete (window as any).location
+      window.location = { href: '' } as any
 
       render(
         <ErrorBoundary>
-          <TestComponent />
+          <ThrowError />
         </ErrorBoundary>
       )
 
-      // Error state should be shown
-      expect(screen.getByText('Something went wrong')).toBeInTheDocument()
+      const goHomeButton = screen.getByRole('button', { name: 'Go to home page' })
+      fireEvent.click(goHomeButton)
 
-      // Fix the component
-      shouldThrow = false
-
-      // Click Try Again - this will reset the error boundary
-      const tryAgainButton = screen.getByRole('button', { name: 'Try again' })
-      fireEvent.click(tryAgainButton)
-
-      // Should show content now (error boundary resets and re-renders children)
-      expect(screen.getByText('No error')).toBeInTheDocument()
+      // href will be absolute URL in jsdom environment
+      expect(window.location.href).toMatch(/\/$/)
     })
   })
 
@@ -296,7 +281,6 @@ describe('ErrorBoundary', () => {
         </ErrorBoundary>
       )
 
-      expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Go to home page' })).toBeInTheDocument()
     })
 

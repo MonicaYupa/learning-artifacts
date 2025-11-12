@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useDebouncedEffect } from '@/hooks/useDebounce'
 import type { ExerciseMessage, ModuleProgress } from '@/types/exercise'
 
 interface UseModuleProgressReturn {
@@ -106,31 +107,36 @@ export function useModuleProgress(moduleId: string | string[]): UseModuleProgres
     setIsLoading(false)
   }, [moduleId, storageKey])
 
-  // Save progress to localStorage whenever state changes
-  useEffect(() => {
-    if (isLoading || !moduleId) return
+  // Save progress to localStorage whenever state changes (debounced to prevent excessive writes)
+  // Using 500ms debounce to batch rapid state changes (e.g., multiple hints in quick succession)
+  useDebouncedEffect(
+    () => {
+      if (isLoading || !moduleId) return
 
-    const dataToSave: ModuleProgress = {
-      completedExercises: Array.from(completedExercises),
-      exerciseResponses: Object.fromEntries(exerciseResponses),
-      exerciseHints: Object.fromEntries(exerciseHints),
-      exerciseHintMessages: Object.fromEntries(exerciseHintMessages),
-      exerciseFeedbackMessages: Object.fromEntries(exerciseFeedbackMessages),
-      exerciseAssessments: Object.fromEntries(exerciseAssessments),
-    }
+      const dataToSave: ModuleProgress = {
+        completedExercises: Array.from(completedExercises),
+        exerciseResponses: Object.fromEntries(exerciseResponses),
+        exerciseHints: Object.fromEntries(exerciseHints),
+        exerciseHintMessages: Object.fromEntries(exerciseHintMessages),
+        exerciseFeedbackMessages: Object.fromEntries(exerciseFeedbackMessages),
+        exerciseAssessments: Object.fromEntries(exerciseAssessments),
+      }
 
-    localStorage.setItem(storageKey, JSON.stringify(dataToSave))
-  }, [
-    moduleId,
-    completedExercises,
-    exerciseResponses,
-    exerciseHints,
-    exerciseHintMessages,
-    exerciseFeedbackMessages,
-    exerciseAssessments,
-    isLoading,
-    storageKey,
-  ])
+      localStorage.setItem(storageKey, JSON.stringify(dataToSave))
+    },
+    500, // Debounce delay in milliseconds
+    [
+      moduleId,
+      completedExercises,
+      exerciseResponses,
+      exerciseHints,
+      exerciseHintMessages,
+      exerciseFeedbackMessages,
+      exerciseAssessments,
+      isLoading,
+      storageKey,
+    ]
+  )
 
   // Updater functions
   const completeExercise = useCallback((index: number) => {

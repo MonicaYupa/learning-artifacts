@@ -16,7 +16,7 @@ export default function FeedbackDisplay({
   attemptNumber,
   modelAnswer,
 }: FeedbackDisplayProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false) // Start expanded
   const getAssessmentStyles = () => {
     switch (assessment) {
       case 'strong':
