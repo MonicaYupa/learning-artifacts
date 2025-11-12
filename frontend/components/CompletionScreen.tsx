@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
-import CelebrationAnimation from './CelebrationAnimation'
 import ConfidenceRating from './ConfidenceRating'
 
 interface CompletionScreenProps {
@@ -93,8 +92,8 @@ export default function CompletionScreen({
           position: 'fixed',
           inset: 0,
           zIndex: 9998,
-          backgroundColor: 'rgba(0, 0, 0, 0.4)',
-          backdropFilter: 'blur(4px)',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(8px)',
         }}
         onClick={onClose}
         aria-hidden="true"
@@ -126,25 +125,20 @@ export default function CompletionScreen({
             maxWidth: '48rem',
             overflowY: 'auto',
             borderRadius: '1rem',
-            background: 'linear-gradient(to bottom right, #fdfcfb, #ffffff, #f7f6f4)',
-            padding: '1.5rem',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            background: '#ffffff',
+            padding: '2.5rem 1.5rem 2rem',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
           }}
         >
           {/* Content */}
           <div className="mx-auto max-w-2xl">
-            {/* Celebration Animation */}
-            <div className="animate-fadeIn scale-75 -mb-4">
-              <CelebrationAnimation />
-            </div>
-
-            {/* Completion Header */}
-            <div className="animate-fadeIn stagger-1 mb-5 text-center sm:mb-6">
+            {/* Completion Header - Centered */}
+            <div className="animate-fadeIn mb-8 text-center">
               <h1
                 id="completion-title"
-                className="mb-3 text-3xl font-extrabold leading-tight tracking-tight text-neutral-900 sm:text-4xl"
+                className="mb-4 text-3xl font-semibold leading-tight tracking-tight text-neutral-900 sm:text-4xl"
               >
-                Module Complete!
+                Practice Complete ✨
               </h1>
 
               {/* Concepts Practiced Badges */}
@@ -152,30 +146,18 @@ export default function CompletionScreen({
                 {/* Show topic or domain badge */}
                 {(moduleTopic || moduleDomain) && (
                   <div
-                    className="animate-scaleIn inline-flex items-center gap-1.5 rounded-full border-2 border-primary-200 bg-gradient-to-r from-primary-50 to-primary-100 px-3 py-1.5 transition-all hover:scale-105 sm:px-4 sm:py-2"
+                    className="animate-badge-glimmer inline-flex items-center overflow-hidden rounded-full border border-cream-300 bg-cream-100 px-3 py-1.5 shadow-sm sm:px-4 sm:py-2"
                     style={{
-                      animationDelay: '0.2s',
+                      animationDelay: '0.3s',
                     }}
                   >
-                    {/* Checkmark Icon */}
-                    <svg
-                      data-testid="checkmark-icon"
-                      className="h-4 w-4 flex-shrink-0 text-primary-600"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                      xmlns="http://www.w3.org/2000/svg"
-                      aria-hidden="true"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-
                     {/* Topic or Domain Badge */}
-                    <span className="text-sm font-extrabold uppercase tracking-wider text-primary-800 sm:text-base">
-                      {(moduleTopic || moduleDomain)?.replace(/_/g, ' ')}
+                    <span className="text-sm font-semibold tracking-wide text-neutral-800 sm:text-base">
+                      {(moduleTopic || moduleDomain)
+                        ?.replace(/_/g, ' ')
+                        .split(' ')
+                        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' ')}
                     </span>
                   </div>
                 )}
@@ -183,7 +165,7 @@ export default function CompletionScreen({
             </div>
 
             {/* Confidence Rating */}
-            <section className="animate-fadeIn stagger-3 mb-3 rounded-2xl bg-white p-4 shadow-md sm:mb-4 sm:p-5">
+            <section className="animate-fadeIn stagger-3 mb-5 rounded-2xl bg-white p-6 sm:p-8">
               <ConfidenceRating sessionId={sessionId} />
             </section>
 
@@ -191,9 +173,9 @@ export default function CompletionScreen({
             <div className="animate-fadeIn stagger-4 flex justify-center">
               <button
                 onClick={handleContinue}
-                className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 px-8 py-3 text-base font-bold text-white shadow-lg transition-all hover:from-primary-600 hover:to-primary-700 hover:shadow-xl hover:scale-105 active:scale-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 sm:py-4 sm:text-lg"
+                className="group relative rounded-xl bg-primary-500 px-8 py-3 text-base font-bold text-white transition-all hover:bg-primary-600 hover:scale-105 active:scale-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 sm:py-4 sm:text-lg"
               >
-                <span className="relative z-10 flex items-center gap-2">
+                <span className="flex items-center gap-2">
                   Continue
                   <svg
                     className="h-5 w-5 transition-transform group-hover:translate-x-1"
@@ -281,6 +263,42 @@ export default function CompletionScreen({
           }
         }
 
+        @keyframes badgeGlimmer {
+          0% {
+            opacity: 0;
+            transform: translateY(5px);
+          }
+          40% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          50% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes glimmerShine {
+          0% {
+            background-position: -200% center;
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          90% {
+            opacity: 1;
+          }
+          100% {
+            background-position: 200% center;
+            opacity: 0;
+          }
+        }
+
         .animate-fadeIn {
           animation: fadeIn 0.6s ease-out forwards;
         }
@@ -291,6 +309,30 @@ export default function CompletionScreen({
 
         .animate-scaleIn {
           animation: scaleIn 0.4s ease-out forwards;
+          opacity: 0;
+        }
+
+        .animate-badge-glimmer {
+          animation: badgeGlimmer 0.6s ease-out forwards;
+          opacity: 0;
+          position: relative;
+        }
+
+        .animate-badge-glimmer::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.4) 50%,
+            transparent 100%
+          );
+          background-size: 200% 100%;
+          animation: glimmerShine 0.8s ease-in-out 0.5s forwards;
           opacity: 0;
         }
 

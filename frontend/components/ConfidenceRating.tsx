@@ -77,12 +77,12 @@ export default function ConfidenceRating({ sessionId, onRatingSubmitted }: Confi
                 className="sr-only"
               />
               <div
-                className={`flex h-20 w-20 items-center justify-center rounded-2xl border-2 p-3 transition-all sm:h-24 sm:w-24 sm:p-4 ${
+                className={`flex h-20 w-20 items-center justify-center rounded-2xl p-3 transition-all sm:h-24 sm:w-24 sm:p-4 ${
                   selectedRating === option.value
-                    ? 'scale-110 border-primary-500 bg-primary-50 shadow-lg'
+                    ? 'scale-110 border-2 border-primary-500 bg-primary-50'
                     : hoverRating === option.value
-                      ? 'scale-105 border-primary-300 bg-primary-50/50 shadow-md'
-                      : 'border-cream-200 bg-white hover:border-primary-200'
+                      ? 'scale-105 border-2 border-primary-400 bg-primary-50/50'
+                      : 'border border-neutral-200 bg-white hover:border-primary-300'
                 }`}
               >
                 <span className="text-4xl sm:text-5xl" role="img" aria-label={option.label}>

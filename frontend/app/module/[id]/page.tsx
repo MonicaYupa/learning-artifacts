@@ -247,8 +247,9 @@ export default function ModulePage() {
 
     if (currentExerciseIndex < totalExercises - 1) {
       // Move to next exercise
-      setCurrentExerciseIndex((prev) => prev + 1)
-      resetExerciseState()
+      const nextExerciseIndex = currentExerciseIndex + 1
+      setCurrentExerciseIndex(nextExerciseIndex)
+      resetExerciseState(nextExerciseIndex)
     } else {
       // Module complete - show completion modal
       setShowCompletionModal(true)
@@ -751,11 +752,12 @@ export default function ModulePage() {
                                   if (currentExerciseIndex < totalExercises - 1) {
                                     advanceToNextExercise()
                                   } else {
-                                    // Last exercise - show completion modal
+                                    // Last exercise - mark as completed before showing completion modal
+                                    completeExercise(currentExerciseIndex)
                                     setShowCompletionModal(true)
                                   }
                                 }}
-                                className="animate-fadeInUp w-full rounded-lg border-2 border-primary-500 bg-primary-500/10 px-4 py-2.5 text-sm font-medium text-primary-400 shadow-sm transition-all hover:border-primary-500 hover:bg-primary-500 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-neutral-800 sm:w-auto sm:px-6"
+                                className="animate-fadeInUp w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700 hover:shadow-md active:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-neutral-800 sm:w-auto sm:px-6"
                               >
                                 <span className="flex items-center justify-center gap-2">
                                   {currentExerciseIndex < totalExercises - 1 ? (
