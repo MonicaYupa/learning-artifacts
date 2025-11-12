@@ -64,12 +64,6 @@ export default function AnswerSubmission({
         hints_used: hintsUsed,
       })
 
-      // Only clear answer if advancing to next exercise
-      // Otherwise keep it so user can iterate on their answer
-      if (response.should_advance) {
-        setAnswer('')
-      }
-
       // Reset timer for next attempt
       startTimeRef.current = Date.now()
 

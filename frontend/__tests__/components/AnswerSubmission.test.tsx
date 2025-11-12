@@ -161,7 +161,7 @@ describe('AnswerSubmission', () => {
       })
     })
 
-    it('clears textarea after successful submission', async () => {
+    it('keeps textarea content after successful submission', async () => {
       const user = userEvent.setup({ delay: null })
       mockSubmitAnswer.mockResolvedValueOnce(mockSubmitResponseStrong)
 
@@ -183,8 +183,11 @@ describe('AnswerSubmission', () => {
       await user.click(submitButton)
 
       await waitFor(() => {
-        expect(textarea.value).toBe('')
+        expect(mockOnSubmitSuccess).toHaveBeenCalled()
       })
+
+      // Answer should remain visible after submission
+      expect(textarea.value).toBe('My answer')
     })
   })
 
@@ -401,9 +404,14 @@ describe('AnswerSubmission', () => {
       const submitButton = screen.getByRole('button', { name: /submit answer/i })
 
       // Click multiple times rapidly
-      await user.click(submitButton)
-      await user.click(submitButton)
-      await user.click(submitButton)
+      user.click(submitButton)
+      user.click(submitButton)
+      user.click(submitButton)
+
+      // Wait for the async operations to settle
+      await waitFor(() => {
+        expect(mockOnSubmitSuccess).toHaveBeenCalled()
+      })
 
       // Should only submit once
       expect(mockSubmitAnswer).toHaveBeenCalledTimes(1)
