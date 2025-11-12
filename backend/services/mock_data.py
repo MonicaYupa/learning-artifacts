@@ -496,7 +496,7 @@ def evaluate_mock_answer(exercise: Dict, answer_text: str, hints_used: int) -> D
         hints_used: Number of hints used (0-3)
 
     Returns:
-        Dictionary with assessment, internal_score, feedback, and should_advance
+        Dictionary with assessment, internal_score, and feedback
     """
 
     # Simple heuristic evaluation based on answer length and keywords
@@ -528,15 +528,12 @@ def evaluate_mock_answer(exercise: Dict, answer_text: str, hints_used: int) -> D
     # Determine assessment based on score
     if total_score >= 80:
         assessment = "strong"
-        should_advance = True
         feedback = "Excellent work! Your answer demonstrates strong understanding of the key concepts. You've identified the main points and provided clear reasoning. This shows you're ready to move forward."
     elif total_score >= 50:
         assessment = "developing"
-        should_advance = False
         feedback = "Good start! Your answer shows emerging understanding, but could be strengthened. Consider elaborating on the key validation criteria and providing more specific examples or justification for your conclusions."
     else:
         assessment = "needs_support"
-        should_advance = False
         feedback = "Your answer needs more development. Review the exercise prompt and validation criteria carefully. Consider using the hints to guide your thinking, and try to address each of the key concepts more thoroughly."
 
     # Add some randomness to make it more realistic (±10 points)
@@ -546,7 +543,6 @@ def evaluate_mock_answer(exercise: Dict, answer_text: str, hints_used: int) -> D
     # Adjust assessment if score changed significantly
     if final_score >= 80 and assessment != "strong":
         assessment = "strong"
-        should_advance = True
     elif final_score < 50 and assessment == "developing":
         assessment = "needs_support"
 
@@ -554,5 +550,4 @@ def evaluate_mock_answer(exercise: Dict, answer_text: str, hints_used: int) -> D
         "assessment": assessment,
         "internal_score": final_score,
         "feedback": feedback,
-        "should_advance": should_advance,
     }

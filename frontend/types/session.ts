@@ -40,11 +40,12 @@ export interface HintResponse {
 
 export interface SubmitResponse {
   assessment: AssessmentLevel
+  internal_score: number
   feedback: string
-  should_advance: boolean
-  show_model_answer: boolean
+  attempt_number: number
+  hint_available: boolean
+  model_answer_available: boolean
   model_answer?: string
-  session: Session
 }
 
 export interface ApiError {

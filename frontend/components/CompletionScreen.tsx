@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, memo } from 'react'
 import ConfidenceRating from './ConfidenceRating'
 
 interface CompletionScreenProps {
@@ -16,7 +16,7 @@ interface CompletionScreenProps {
  * CompletionScreen Component (Modal Overlay)
  * Displays celebration, summary, confidence rating, and navigation after module completion
  */
-export default function CompletionScreen({
+function CompletionScreen({
   moduleTopic,
   moduleDomain,
   sessionId,
@@ -133,7 +133,7 @@ export default function CompletionScreen({
           {/* Content */}
           <div className="mx-auto max-w-2xl">
             {/* Completion Header - Centered */}
-            <div className="animate-fadeIn mb-8 text-center">
+            <div className="mb-8 text-center">
               <h1
                 id="completion-title"
                 className="mb-4 text-3xl font-semibold leading-tight tracking-tight text-neutral-900 sm:text-4xl"
@@ -145,12 +145,7 @@ export default function CompletionScreen({
               <div className="flex flex-wrap justify-center gap-2">
                 {/* Show topic or domain badge */}
                 {(moduleTopic || moduleDomain) && (
-                  <div
-                    className="animate-badge-glimmer inline-flex items-center overflow-hidden rounded-full border border-cream-300 bg-cream-100 px-3 py-1.5 shadow-sm sm:px-4 sm:py-2"
-                    style={{
-                      animationDelay: '0.3s',
-                    }}
-                  >
+                  <div className="animate-badge-glimmer inline-flex items-center overflow-hidden rounded-full border border-cream-300 bg-cream-100 px-3 py-1.5 shadow-sm sm:px-4 sm:py-2">
                     {/* Topic or Domain Badge */}
                     <span className="text-sm font-semibold tracking-wide text-neutral-800 sm:text-base">
                       {(moduleTopic || moduleDomain)
@@ -165,12 +160,12 @@ export default function CompletionScreen({
             </div>
 
             {/* Confidence Rating */}
-            <section className="animate-fadeIn stagger-3 mb-5 rounded-2xl bg-white p-6 sm:p-8">
+            <section className="mb-5 rounded-2xl bg-white p-6 sm:p-8">
               <ConfidenceRating sessionId={sessionId} />
             </section>
 
             {/* Navigation Button */}
-            <div className="animate-fadeIn stagger-4 flex justify-center">
+            <div className="flex justify-center">
               <button
                 onClick={handleContinue}
                 className="group relative rounded-xl bg-primary-500 px-8 py-3 text-base font-bold text-white transition-all hover:bg-primary-600 hover:scale-105 active:scale-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 sm:py-4 sm:text-lg"
@@ -230,39 +225,6 @@ export default function CompletionScreen({
           @apply absolute right-4 top-4 rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 sm:right-6 sm:top-6;
         }
 
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes slideInRight {
-          from {
-            opacity: 0;
-            transform: translateX(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-
-        @keyframes scaleIn {
-          from {
-            opacity: 0;
-            transform: scale(0.8);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-
         @keyframes badgeGlimmer {
           0% {
             opacity: 0;
@@ -299,19 +261,6 @@ export default function CompletionScreen({
           }
         }
 
-        .animate-fadeIn {
-          animation: fadeIn 0.6s ease-out forwards;
-        }
-
-        .animate-slideInRight {
-          animation: slideInRight 0.5s ease-out forwards;
-        }
-
-        .animate-scaleIn {
-          animation: scaleIn 0.4s ease-out forwards;
-          opacity: 0;
-        }
-
         .animate-badge-glimmer {
           animation: badgeGlimmer 0.6s ease-out forwards;
           opacity: 0;
@@ -335,27 +284,9 @@ export default function CompletionScreen({
           animation: glimmerShine 0.8s ease-in-out 0.5s forwards;
           opacity: 0;
         }
-
-        .stagger-1 {
-          animation-delay: 0.1s;
-        }
-
-        .stagger-2 {
-          animation-delay: 0.2s;
-        }
-
-        .stagger-3 {
-          animation-delay: 0.3s;
-        }
-
-        .stagger-4 {
-          animation-delay: 0.4s;
-        }
-
-        .stagger-5 {
-          animation-delay: 0.5s;
-        }
       `}</style>
     </>
   )
 }
+
+export default memo(CompletionScreen)

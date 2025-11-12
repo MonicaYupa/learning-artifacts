@@ -132,7 +132,6 @@ class AttemptSchema(BaseModel):
     assessment: Assessment
     internal_score: int = Field(..., ge=0, le=100)
     feedback: str
-    should_advance: bool
     created_at: datetime
 
 
@@ -167,7 +166,6 @@ class AnswerSubmitResponse(BaseModel):
     assessment: Assessment
     internal_score: int
     feedback: str
-    should_advance: bool
     attempt_number: int
     hint_available: bool
     model_answer_available: bool

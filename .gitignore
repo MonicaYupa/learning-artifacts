@@ -77,3 +77,6 @@ htmlcov/
 # Logs
 *.log
 logs/
+
+# Demo data
+scripts/

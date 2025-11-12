@@ -297,7 +297,6 @@ def mock_claude_evaluate_answer():
                 "assessment": "strong",
                 "internal_score": 85,
                 "feedback": "Great answer! You demonstrated good understanding.",
-                "should_advance": True,
             }
         )
         yield mock

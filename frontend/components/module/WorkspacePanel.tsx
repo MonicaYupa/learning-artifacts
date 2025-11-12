@@ -21,6 +21,7 @@ function WorkspacePanel() {
     currentExerciseIndex,
     totalExercises,
     exerciseResponses,
+    completedExercises,
     activeTab,
     handleHintReceived,
     handleSubmitSuccess,
@@ -33,6 +34,10 @@ function WorkspacePanel() {
 
   const isLastExercise = currentExerciseIndex >= totalExercises - 1
   const initialAnswer = exerciseResponses.get(currentExerciseIndex) || ''
+  const hasBeenSubmitted =
+    showContinueButton ||
+    exerciseResponses.has(currentExerciseIndex) ||
+    completedExercises.has(currentExerciseIndex)
 
   return (
     <div
@@ -175,7 +180,7 @@ function WorkspacePanel() {
                     <button
                       onClick={submitProps.onClick}
                       disabled={submitProps.disabled}
-                      aria-label={`${showContinueButton ? 'Resubmit' : 'Submit'} answer ${submitProps.isSubmitting ? '(submitting...)' : ''}`}
+                      aria-label={`${hasBeenSubmitted ? 'Resubmit' : 'Submit'} answer ${submitProps.isSubmitting ? '(submitting...)' : ''}`}
                       className="w-full rounded-lg bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-600 hover:shadow-md active:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary-500 disabled:hover:shadow-sm sm:w-auto sm:px-6"
                     >
                       <span className="flex items-center justify-center gap-2">
@@ -220,7 +225,7 @@ function WorkspacePanel() {
                                 d="M5 13l4 4L19 7"
                               />
                             </svg>
-                            <span>{showContinueButton ? 'Resubmit' : 'Submit'}</span>
+                            <span>{hasBeenSubmitted ? 'Resubmit' : 'Submit'}</span>
                           </>
                         )}
                       </span>

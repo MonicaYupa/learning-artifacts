@@ -292,7 +292,6 @@ class TestAnswerSubmissionFlow:
                 "assessment": "strong",
                 "internal_score": 85,
                 "feedback": "Great job!",
-                "should_advance": True,
             }
 
             response = client.post(
@@ -311,7 +310,6 @@ class TestAnswerSubmissionFlow:
             assert result["assessment"] == "strong"
             assert result["internal_score"] == 85
             assert result["feedback"] == "Great job!"
-            assert result["should_advance"] is True
             assert result["attempt_number"] == 1
             assert result["hint_available"] is True
 
@@ -335,7 +333,6 @@ class TestAnswerSubmissionFlow:
                 "assessment": "developing",
                 "internal_score": 50,
                 "feedback": "Try again",
-                "should_advance": False,
             }
 
             # Submit first attempt
@@ -386,7 +383,6 @@ class TestAnswerSubmissionFlow:
                 "assessment": "developing",
                 "internal_score": 50,
                 "feedback": "Keep trying",
-                "should_advance": False,
             }
 
             # Submit MAX_ATTEMPTS attempts
@@ -497,7 +493,6 @@ class TestCompleteUserJourney:
                     "assessment": "strong",
                     "internal_score": 90,
                     "feedback": "Excellent!",
-                    "should_advance": True,
                 }
 
                 # Step 1: Generate module
@@ -528,7 +523,7 @@ class TestCompleteUserJourney:
                         },
                     )
                     assert answer1_response.status_code == 200
-                    assert answer1_response.json()["should_advance"] is True
+                    assert answer1_response.json()["assessment"] == "strong"
 
                     # Step 4: Advance to next exercise
                     update_response = client.patch(
@@ -597,7 +592,6 @@ class TestJSONBOperationsIntegrity:
                 "assessment": "strong",
                 "internal_score": 85,
                 "feedback": "Good",
-                "should_advance": True,
             }
 
             # Submit multiple answers

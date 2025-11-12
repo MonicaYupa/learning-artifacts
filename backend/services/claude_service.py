@@ -192,7 +192,7 @@ Each exercise must include:
 
 Return ONLY valid JSON matching this exact schema - no markdown, no code blocks, just the JSON:
 {
-  "title": "string (concise module title)",
+  "title": "string (concise, engaging module title)",
   "domain": "string (lowercase_with_underscores like 'product_management')",
   "exercises": [
     {
@@ -323,7 +323,7 @@ async def evaluate_answer(exercise: Dict, answer_text: str, hints_used: int) -> 
         hints_used: Number of hints the student used (0-3)
 
     Returns:
-        Dictionary with assessment, internal_score, feedback, and should_advance
+        Dictionary with assessment, internal_score, and feedback
 
     Raises:
         Exception: If evaluation fails
@@ -350,12 +350,10 @@ Return ONLY valid JSON matching this schema - no markdown, no code blocks:
 {
   "assessment": "strong|developing|needs_support",
   "internal_score": 85,
-  "feedback": "Specific, constructive feedback...",
-  "should_advance": true
+  "feedback": "Specific, constructive feedback..."
 }
 
 Rules:
-- should_advance is true only if assessment is "strong"
 - Feedback should be 2-3 sentences
 - Score must match assessment level
 - Be encouraging but honest"""
@@ -395,7 +393,7 @@ Return ONLY the JSON evaluation object."""
         evaluation = json.loads(response_text)
 
         # Validate required fields
-        required_fields = ["assessment", "internal_score", "feedback", "should_advance"]
+        required_fields = ["assessment", "internal_score", "feedback"]
         if not all(field in evaluation for field in required_fields):
             raise ValueError("Missing required fields in evaluation")
 

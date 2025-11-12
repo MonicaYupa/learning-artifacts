@@ -448,7 +448,6 @@ async def submit_answer(
             "assessment": evaluation["assessment"],
             "internal_score": evaluation["internal_score"],
             "feedback": evaluation["feedback"],
-            "should_advance": evaluation["should_advance"],
             "created_at": datetime.utcnow().isoformat(),
         }
 
@@ -467,17 +466,13 @@ async def submit_answer(
         # Check if hint is available (if user hasn't used all hints)
         hint_available = request.hints_used < ExerciseConstants.MAX_HINTS
 
-        # Check if model answer is available (after max attempts or strong assessment)
-        model_answer_available = (
-            attempt_number >= ExerciseConstants.MAX_ATTEMPTS
-            or evaluation["should_advance"]
-        )
+        # Model answer is always available after first submission
+        model_answer_available = True
 
         return {
             "assessment": evaluation["assessment"],
             "internal_score": evaluation["internal_score"],
             "feedback": evaluation["feedback"],
-            "should_advance": evaluation["should_advance"],
             "attempt_number": attempt_number,
             "hint_available": hint_available,
             "model_answer_available": model_answer_available,

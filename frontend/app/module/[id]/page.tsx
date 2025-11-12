@@ -242,8 +242,8 @@ export default function ModulePage() {
       // Show Continue button after first submission
       setShowContinueButton(true)
 
-      // Show celebration animation if next exercise should be unlocked
-      if (response.should_advance && currentExerciseIndex < totalExercises - 1) {
+      // Show celebration animation for strong performance
+      if (response.assessment === 'strong' && currentExerciseIndex < totalExercises - 1) {
         setShowCelebration(true)
         setJustUnlockedExercise(currentExerciseIndex + 1)
 
@@ -258,11 +258,9 @@ export default function ModulePage() {
         }, UNLOCK_ANIMATION_DURATION)
       }
 
-      // If should advance but user doesn't click Continue, allow retry
-      if (!response.should_advance) {
-        // Increment attempt number for retry
-        setCurrentAttemptNumber((prev) => prev + 1)
-      }
+      // Increment attempt number to track all submissions
+      // (resets when navigating to next exercise via resetExerciseUIState)
+      setCurrentAttemptNumber((prev) => prev + 1)
 
       // Switch to exercise tab on mobile to show feedback
       if (window.innerWidth < MOBILE_BREAKPOINT) {
@@ -290,6 +288,10 @@ export default function ModulePage() {
     completeExercise(currentExerciseIndex)
     setShowCompletionModal(true)
   }, [currentExerciseIndex, completeExercise, setShowCompletionModal])
+
+  const handleCloseCompletionModal = useCallback(() => {
+    setShowCompletionModal(false)
+  }, [setShowCompletionModal])
 
   if (loading || isProgressLoading) {
     return (
@@ -372,7 +374,7 @@ export default function ModulePage() {
               moduleDomain={module.domain}
               sessionId={sessionId}
               isOpen={showCompletionModal}
-              onClose={() => setShowCompletionModal(false)}
+              onClose={handleCloseCompletionModal}
             />
           )}
 
