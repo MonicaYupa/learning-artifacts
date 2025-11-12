@@ -121,7 +121,7 @@ export default function LoginPage() {
 
         {/* Footer branding */}
         <p className="mt-4 text-center text-[10px] text-gray-500 sm:mt-6 sm:text-xs">
-          Powered by Claude • Learning Artifacts
+          Powered by Claude • Learning Artifacts Demo
         </p>
       </div>
     </div>

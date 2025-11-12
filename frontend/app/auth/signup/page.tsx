@@ -46,6 +46,8 @@ export default function SignupPage() {
 
       if (data.session) {
         // User is automatically signed in
+        // Clear any existing session storage from previous sessions
+        sessionStorage.clear()
         router.push('/module')
         router.refresh()
       } else {
@@ -167,7 +169,7 @@ export default function SignupPage() {
 
         {/* Footer branding */}
         <p className="mt-4 text-center text-[10px] text-gray-500 sm:mt-6 sm:text-xs">
-          Powered by Claude • Learning Artifacts
+          Powered by Claude • Learning Artifacts Demo
         </p>
       </div>
     </div>
