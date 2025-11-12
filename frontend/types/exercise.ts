@@ -24,5 +24,6 @@ export interface ModuleProgress {
   exerciseResponses: Record<number, string>
   exerciseHints: Record<number, number>
   exerciseHintMessages: Record<number, ExerciseMessage[]>
+  exerciseFeedbackMessages?: Record<number, ExerciseMessage[]>
   exerciseAssessments: Record<number, 'strong' | 'developing' | 'needs_support'>
 }

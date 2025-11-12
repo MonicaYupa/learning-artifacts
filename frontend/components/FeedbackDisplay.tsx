@@ -117,14 +117,14 @@ export default function FeedbackDisplay({
 
   return (
     <article
-      className={`rounded-lg border ${styles.container}`}
+      className={`rounded-lg border ${styles.container} focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2`}
       role="article"
       aria-label={`Feedback for attempt ${attemptNumber}`}
     >
       {/* Collapsible header button */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-opacity-80 focus:outline-none"
         aria-expanded={!isCollapsed}
         aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} feedback for attempt ${attemptNumber}`}
       >

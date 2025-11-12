@@ -44,9 +44,6 @@ export default function ModulePage() {
   // Continue button and unlock notification state
   const [showContinueButton, setShowContinueButton] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
-  const [lastAssessment, setLastAssessment] = useState<
-    'strong' | 'developing' | 'needs_support' | null
-  >(null)
   const [justUnlockedExercise, setJustUnlockedExercise] = useState<number | null>(null)
 
   // Completion modal state
@@ -62,12 +59,14 @@ export default function ModulePage() {
     exerciseResponses,
     exerciseHints,
     exerciseHintMessages,
+    exerciseFeedbackMessages,
     exerciseAssessments,
     isLoading: isProgressLoading,
     completeExercise,
     saveResponse,
     saveHints,
     saveHintMessage,
+    saveFeedbackMessage,
     saveAssessment,
   } = useModuleProgress(params.id as string)
 
@@ -125,19 +124,21 @@ export default function ModulePage() {
     }
   }, [module, completedExercises.size]) // Only run when module loads or completedExercises size changes
 
-  // Restore hints and hint messages when current exercise changes
+  // Restore hints, hint messages, and feedback messages when current exercise changes
   useEffect(() => {
     const savedHints = exerciseHints.get(currentExerciseIndex) || 0
     setHintsUsed(savedHints)
 
     const savedHintMessages = exerciseHintMessages.get(currentExerciseIndex) || []
-    // Only update exercise messages if they are currently empty or only contain hints
-    // This prevents overwriting feedback messages when advancing to next exercise
-    setExerciseMessages((prev) => {
-      const hasFeedback = prev.some((msg) => msg.type === 'feedback')
-      return hasFeedback ? prev : savedHintMessages
-    })
-  }, [currentExerciseIndex, exerciseHints, exerciseHintMessages])
+    const savedFeedbackMessages = exerciseFeedbackMessages.get(currentExerciseIndex) || []
+
+    // Combine hint and feedback messages, sorted by timestamp
+    const allMessages = [...savedHintMessages, ...savedFeedbackMessages].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    )
+
+    setExerciseMessages(allMessages)
+  }, [currentExerciseIndex, exerciseHints, exerciseHintMessages, exerciseFeedbackMessages])
 
   const currentExercise = module?.exercises?.[currentExerciseIndex]
   const totalExercises = module?.exercises?.length || 0
@@ -201,8 +202,8 @@ export default function ModulePage() {
         saveResponse(currentExerciseIndex, submittedAnswer)
       }
 
-      // Save the assessment quality for celebration UI
-      setLastAssessment(response.assessment)
+      // Save the feedback message for this exercise
+      saveFeedbackMessage(currentExerciseIndex, newMessage)
 
       // Save the assessment for this exercise
       saveAssessment(currentExerciseIndex, response.assessment)
@@ -279,14 +280,22 @@ export default function ModulePage() {
     const savedHints = exerciseHints.get(targetExercise) || 0
     setHintsUsed(savedHints)
 
-    // Restore hint messages for this exercise
+    // Restore hint messages and feedback messages for this exercise
     const savedHintMessages = exerciseHintMessages.get(targetExercise) || []
-    setExerciseMessages(savedHintMessages)
+    const savedFeedbackMessages = exerciseFeedbackMessages.get(targetExercise) || []
+
+    // Combine and sort messages by timestamp
+    const allMessages = [...savedHintMessages, ...savedFeedbackMessages].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    )
+
+    setExerciseMessages(allMessages)
+
+    // Show continue button if there is saved feedback
+    setShowContinueButton(savedFeedbackMessages.length > 0)
 
     // Reset UI state
-    setShowContinueButton(false)
     setShowCelebration(false)
-    setLastAssessment(null)
     setJustUnlockedExercise(null)
     setCollapsedHints(new Set())
   }
@@ -362,18 +371,11 @@ export default function ModulePage() {
     <ProtectedRoute>
       <ModuleErrorBoundary moduleId={params.id as string}>
         {/* Completion Modal - rendered first so it overlays */}
-        {showCompletionModal && module && module.exercises && (
+        {showCompletionModal && module && (
           <CompletionScreen
-            moduleId={module.id}
-            moduleTitle={module.topic?.replace(/_/g, ' ') || 'Module'}
             moduleTopic={module.topic}
             moduleDomain={module.domain}
             sessionId={sessionId}
-            exercises={module.exercises.map((ex) => ({
-              id: ex.id,
-              name: ex.name,
-              type: ex.type,
-            }))}
             isOpen={showCompletionModal}
             onClose={() => setShowCompletionModal(false)}
           />

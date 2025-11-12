@@ -6,12 +6,14 @@ interface UseModuleProgressReturn {
   exerciseResponses: Map<number, string>
   exerciseHints: Map<number, number>
   exerciseHintMessages: Map<number, ExerciseMessage[]>
+  exerciseFeedbackMessages: Map<number, ExerciseMessage[]>
   exerciseAssessments: Map<number, 'strong' | 'developing' | 'needs_support'>
   isLoading: boolean
   completeExercise: (index: number) => void
   saveResponse: (index: number, response: string) => void
   saveHints: (index: number, hintsUsed: number) => void
   saveHintMessage: (index: number, message: ExerciseMessage) => void
+  saveFeedbackMessage: (index: number, message: ExerciseMessage) => void
   saveAssessment: (index: number, assessment: 'strong' | 'developing' | 'needs_support') => void
 }
 
@@ -27,6 +29,9 @@ export function useModuleProgress(moduleId: string | string[]): UseModuleProgres
   const [exerciseHintMessages, setExerciseHintMessages] = useState<Map<number, ExerciseMessage[]>>(
     new Map()
   )
+  const [exerciseFeedbackMessages, setExerciseFeedbackMessages] = useState<
+    Map<number, ExerciseMessage[]>
+  >(new Map())
   const [exerciseAssessments, setExerciseAssessments] = useState<
     Map<number, 'strong' | 'developing' | 'needs_support'>
   >(new Map())
@@ -72,6 +77,17 @@ export function useModuleProgress(moduleId: string | string[]): UseModuleProgres
           )
         }
 
+        if (progress.exerciseFeedbackMessages) {
+          setExerciseFeedbackMessages(
+            new Map(
+              Object.entries(progress.exerciseFeedbackMessages).map(([k, v]) => [
+                Number(k),
+                v as ExerciseMessage[],
+              ])
+            )
+          )
+        }
+
         if (progress.exerciseAssessments) {
           setExerciseAssessments(
             new Map(
@@ -99,6 +115,7 @@ export function useModuleProgress(moduleId: string | string[]): UseModuleProgres
       exerciseResponses: Object.fromEntries(exerciseResponses),
       exerciseHints: Object.fromEntries(exerciseHints),
       exerciseHintMessages: Object.fromEntries(exerciseHintMessages),
+      exerciseFeedbackMessages: Object.fromEntries(exerciseFeedbackMessages),
       exerciseAssessments: Object.fromEntries(exerciseAssessments),
     }
 
@@ -109,6 +126,7 @@ export function useModuleProgress(moduleId: string | string[]): UseModuleProgres
     exerciseResponses,
     exerciseHints,
     exerciseHintMessages,
+    exerciseFeedbackMessages,
     exerciseAssessments,
     isLoading,
     storageKey,
@@ -144,6 +162,15 @@ export function useModuleProgress(moduleId: string | string[]): UseModuleProgres
     })
   }, [])
 
+  const saveFeedbackMessage = useCallback((index: number, message: ExerciseMessage) => {
+    setExerciseFeedbackMessages((prev) => {
+      const newMap = new Map(prev)
+      // Replace old feedback with new feedback (only keep the latest)
+      newMap.set(index, [message])
+      return newMap
+    })
+  }, [])
+
   const saveAssessment = useCallback(
     (index: number, assessment: 'strong' | 'developing' | 'needs_support') => {
       setExerciseAssessments((prev) => {
@@ -160,12 +187,14 @@ export function useModuleProgress(moduleId: string | string[]): UseModuleProgres
     exerciseResponses,
     exerciseHints,
     exerciseHintMessages,
+    exerciseFeedbackMessages,
     exerciseAssessments,
     isLoading,
     completeExercise,
     saveResponse,
     saveHints,
     saveHintMessage,
+    saveFeedbackMessage,
     saveAssessment,
   }
 }

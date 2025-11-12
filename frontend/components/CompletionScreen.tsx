@@ -4,15 +4,11 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import CelebrationAnimation from './CelebrationAnimation'
 import ConfidenceRating from './ConfidenceRating'
-import type { Exercise } from '@/types/exercise'
 
 interface CompletionScreenProps {
-  moduleId: string
-  moduleTitle: string
   moduleTopic?: string
   moduleDomain?: string
   sessionId: string
-  exercises: Exercise[]
   isOpen: boolean
   onClose?: () => void
 }
@@ -22,7 +18,6 @@ interface CompletionScreenProps {
  * Displays celebration, summary, confidence rating, and navigation after module completion
  */
 export default function CompletionScreen({
-  // moduleId, moduleTitle, exercises - reserved for future features
   moduleTopic,
   moduleDomain,
   sessionId,
