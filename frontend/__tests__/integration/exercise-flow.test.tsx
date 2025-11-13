@@ -128,7 +128,6 @@ describe('Exercise Flow Integration Tests', () => {
             timestamp: new Date(),
             assessment: 'strong',
             attemptNumber: 1,
-            modelAnswer: 'Model answer here',
           },
         ],
         showContinueButton: true,

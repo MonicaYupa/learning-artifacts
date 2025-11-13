@@ -5,6 +5,7 @@ A Claude-powered feature that promotes skill development through interactive, pr
 ## Purpose
 
 Traditional AI interactions can make users passive observers. This platform creates an active learning experience where:
+
 - Users engage with AI-generated educational content through hands-on exercises
 - Progressive difficulty builds real competency
 - Immediate feedback reinforces learning
@@ -13,6 +14,7 @@ Traditional AI interactions can make users passive observers. This platform crea
 ## Tech Stack
 
 **Frontend**
+
 - Next.js 16 (App Router)
 - TypeScript
 - React 19
@@ -20,6 +22,7 @@ Traditional AI interactions can make users passive observers. This platform crea
 - Supabase Auth (SSR)
 
 **Backend**
+
 - FastAPI
 - Python 3.9+
 - PostgreSQL (Supabase) with Psycopg3 connection pooling
@@ -28,6 +31,7 @@ Traditional AI interactions can make users passive observers. This platform crea
 - Sentry (backend error tracking)
 
 **DevOps**
+
 - Frontend: Vercel
 - Backend: Railway
 - Database: Supabase
@@ -210,19 +214,23 @@ pytest
 ## API Endpoints
 
 ### Health
+
 - `GET /health` - System health check
 - `GET /ping` - Simple connectivity test
 
 ### Authentication
+
 - Managed via Supabase Auth (JWT tokens)
 
 ### Modules
+
 - `POST /api/modules/generate` - Generate new module from topic/skill level
 - `POST /api/modules/generate/stream` - Generate module with streaming (SSE)
 - `GET /api/modules` - List user's modules
 - `GET /api/modules/{id}` - Get module details
 
 ### Sessions
+
 - `POST /api/sessions` - Start new session
 - `GET /api/sessions/{id}` - Get session state with attempt history
 - `POST /api/sessions/{id}/submit` - Submit answer for evaluation

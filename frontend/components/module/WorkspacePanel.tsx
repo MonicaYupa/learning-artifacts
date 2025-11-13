@@ -73,7 +73,6 @@ function WorkspacePanel() {
                               assessment={message.assessment}
                               feedback={message.content}
                               attemptNumber={message.attemptNumber}
-                              modelAnswer={message.modelAnswer}
                               isStreaming={message.isStreaming}
                             />
                           </div>

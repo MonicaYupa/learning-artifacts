@@ -21,11 +21,11 @@ This report analyzes **12 learners** across **20 sessions** (19 completed) to de
 
 ### Improvement Distribution
 
-| Improvement Range              | Exercise Count | Percentage |
-|--------------------------------|----------------|------------|
-| 🔥 High (+20 points or more)   | 10             | 55.6%      |
-| 📈 Medium (+10 to +19 points)  | 5              | 27.8%      |
-| ✓ Low (+1 to +9 points)        | 3              | 16.7%      |
+| Improvement Range             | Exercise Count | Percentage |
+| ----------------------------- | -------------- | ---------- |
+| 🔥 High (+20 points or more)  | 10             | 55.6%      |
+| 📈 Medium (+10 to +19 points) | 5              | 27.8%      |
+| ✓ Low (+1 to +9 points)       | 3              | 16.7%      |
 
 **📊 Insight:** Across all retried exercises, learners improve their scores by an average of **21.7 points (38.5%)**, demonstrating effective learning through iteration.
 
@@ -46,11 +46,11 @@ This report analyzes **12 learners** across **20 sessions** (19 completed) to de
 
 ### Confidence Growth Distribution
 
-| Growth Level                    | Learning Paths | Percentage |
-|---------------------------------|----------------|------------|
-| 🔥 High (+2 points or more)     | 2              | 100.0%     |
-| 💪 Medium (+1 to +1.9 points)   | 0              | 0.0%       |
-| ✓ Modest (+0.1 to +0.9 points)  | 0              | 0.0%       |
+| Growth Level                   | Learning Paths | Percentage |
+| ------------------------------ | -------------- | ---------- |
+| 🔥 High (+2 points or more)    | 2              | 100.0%     |
+| 💪 Medium (+1 to +1.9 points)  | 0              | 0.0%       |
+| ✓ Modest (+0.1 to +0.9 points) | 0              | 0.0%       |
 
 **📊 Insight:** Learners who complete multiple modules in the same domain show an average confidence increase of **2.00 points** (on a 5-point scale), indicating growing mastery and self-efficacy.
 
@@ -58,14 +58,14 @@ This report analyzes **12 learners** across **20 sessions** (19 completed) to de
 
 Comparing self-assessed confidence with actual achievement:
 
-| Self-Confidence | Sessions | Avg Actual Score | Score Range | Alignment           |
-|-----------------|----------|------------------|-------------|---------------------|
-| 5/5             | 3        | 90.8             | 84.7 - 95.0 | 🎯 Well-calibrated  |
-| 4/5             | 5        | 58.8             | 28.8 - 80.5 | 📊 Over-confident   |
-| 3/5             | 6        | 75.4             | 64.8 - 91.0 | 💎 Under-confident  |
-| 2/5             | 5        | 64.8             | 55.2 - 70.7 | 💎 Under-confident  |
+| Self-Confidence | Sessions | Avg Actual Score | Score Range | Alignment          |
+| --------------- | -------- | ---------------- | ----------- | ------------------ |
+| 5/5             | 3        | 90.8             | 84.7 - 95.0 | 🎯 Well-calibrated |
+| 4/5             | 5        | 58.8             | 28.8 - 80.5 | 📊 Over-confident  |
+| 3/5             | 6        | 75.4             | 64.8 - 91.0 | 💎 Under-confident |
+| 2/5             | 5        | 64.8             | 55.2 - 70.7 | 💎 Under-confident |
 
-*Well-calibrated learners accurately assess their abilities. Under-confident learners perform better than they expect.*
+_Well-calibrated learners accurately assess their abilities. Under-confident learners perform better than they expect._
 
 ---
 
@@ -78,4 +78,4 @@ Comparing self-assessed confidence with actual achievement:
 
 ---
 
-*This report focuses on demonstrating measurable learning improvement and confidence growth. All learners and data are fictional and were generated for demonstration purposes.*
+_This report focuses on demonstrating measurable learning improvement and confidence growth. All learners and data are fictional and were generated for demonstration purposes._
