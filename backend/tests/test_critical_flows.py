@@ -11,27 +11,18 @@ from config.database import execute_query
 
 def create_complete_exercise(
     sequence=1,
+    name="Test Exercise",
     question="Q",
-    hints=None,
-    answer="A",
 ):
     """Helper function to create a complete exercise with all required fields"""
-    if hints is None:
-        hints = ["h1", "h2", "h3"]
     return {
         "sequence": sequence,
+        "name": name,
         "type": "analysis",
         "prompt": question,
         "material": None,
         "options": None,
         "scaffold": None,
-        "hints": hints,
-        "validation_criteria": {
-            "key_concepts": "test concepts",
-            "completeness": "test completeness",
-        },
-        "model_answer": answer,
-        "model_explanation": "This is the explanation for the answer.",
         "estimated_minutes": 5,
     }
 
@@ -52,9 +43,8 @@ class TestModuleGenerationFlow:
                 "exercises": [
                     create_complete_exercise(
                         sequence=1,
+                        name="Python Basics",
                         question="What is Python?",
-                        hints=["hint1", "hint2", "hint3"],
-                        answer="Python is a programming language",
                     )
                 ],
             }
@@ -105,9 +95,8 @@ class TestModuleGenerationFlow:
                     "exercises": [
                         create_complete_exercise(
                             sequence=1,
+                            name="Python Basics",
                             question="What is Python?",
-                            hints=["hint1", "hint2", "hint3"],
-                            answer="Python is a programming language",
                         )
                     ],
                 }
@@ -141,9 +130,8 @@ class TestModuleGenerationFlow:
                 "exercises": [
                     create_complete_exercise(
                         sequence=1,
+                        name="Test Question",
                         question="Test question",
-                        hints=["h1", "h2", "h3"],
-                        answer="Test answer",
                     )
                 ],
             }
@@ -179,7 +167,7 @@ class TestModuleGenerationFlow:
                 "skill_level": "beginner",
                 "exercises": [
                     create_complete_exercise(
-                        sequence=1, question="Q", hints=["h1", "h2", "h3"], answer="A"
+                        sequence=1, name="Test Exercise", question="Q"
                     )
                 ],
             }
@@ -300,6 +288,7 @@ class TestAnswerSubmissionFlow:
                     "answer_text": "Python is a programming language",
                     "time_spent_seconds": 120,
                     "hints_used": 0,
+                    "exercise_index": 0,
                 },
             )
 
@@ -342,6 +331,7 @@ class TestAnswerSubmissionFlow:
                     "answer_text": "First attempt",
                     "time_spent_seconds": 60,
                     "hints_used": 0,
+                    "exercise_index": 0,
                 },
             )
             assert response1.json()["attempt_number"] == 1
@@ -353,6 +343,7 @@ class TestAnswerSubmissionFlow:
                     "answer_text": "Second attempt",
                     "time_spent_seconds": 60,
                     "hints_used": 1,
+                    "exercise_index": 0,
                 },
             )
             assert response2.json()["attempt_number"] == 2
@@ -364,6 +355,7 @@ class TestAnswerSubmissionFlow:
                     "answer_text": "Third attempt",
                     "time_spent_seconds": 60,
                     "hints_used": 2,
+                    "exercise_index": 0,
                 },
             )
             assert response3.json()["attempt_number"] == 3
@@ -375,41 +367,6 @@ class TestAnswerSubmissionFlow:
                 fetch_one=True,
             )
             assert len(session["attempts"]) == 3
-
-    def test_max_attempts_enforcement(self, client, created_session):
-        """CRITICAL: Verify MAX_ATTEMPTS limit is enforced"""
-        with patch("routers.sessions.evaluate_answer") as mock_evaluate:
-            mock_evaluate.return_value = {
-                "assessment": "developing",
-                "internal_score": 50,
-                "feedback": "Keep trying",
-            }
-
-            # Submit MAX_ATTEMPTS attempts
-            for i in range(ExerciseConstants.MAX_ATTEMPTS):
-                response = client.post(
-                    f"/api/sessions/{created_session['id']}/submit",
-                    json={
-                        "answer_text": f"This is attempt number {i+1}",
-                        "time_spent_seconds": 60,
-                        "hints_used": 0,
-                    },
-                )
-                assert (
-                    response.status_code == 200
-                ), f"Attempt {i+1} failed: {response.json()}"
-
-            # Next attempt should fail
-            response = client.post(
-                f"/api/sessions/{created_session['id']}/submit",
-                json={
-                    "answer_text": "Too many attempts",
-                    "time_spent_seconds": 60,
-                    "hints_used": 0,
-                },
-            )
-            assert response.status_code == 400
-            assert "Maximum attempts" in response.json()["detail"]
 
 
 class TestHintRequestFlow:
@@ -476,15 +433,13 @@ class TestCompleteUserJourney:
                     "exercises": [
                         create_complete_exercise(
                             sequence=1,
+                            name="Question 1",
                             question="Q1",
-                            hints=["h1", "h2", "h3"],
-                            answer="A1",
                         ),
                         create_complete_exercise(
                             sequence=2,
+                            name="Question 2",
                             question="Q2",
-                            hints=["h1", "h2", "h3"],
-                            answer="A2",
                         ),
                     ],
                 }
@@ -520,6 +475,7 @@ class TestCompleteUserJourney:
                             "answer_text": "Answer to Q1",
                             "time_spent_seconds": 120,
                             "hints_used": 0,
+                            "exercise_index": 0,
                         },
                     )
                     assert answer1_response.status_code == 200
@@ -539,6 +495,7 @@ class TestCompleteUserJourney:
                             "answer_text": "Answer to Q2",
                             "time_spent_seconds": 100,
                             "hints_used": 1,
+                            "exercise_index": 1,
                         },
                     )
                     assert answer2_response.status_code == 200
@@ -581,9 +538,12 @@ class TestJSONBOperationsIntegrity:
         for exercise in module["exercises"]:
             assert isinstance(exercise, dict)
             assert "prompt" in exercise
-            assert "hints" in exercise
-            assert isinstance(exercise["hints"], list)
-            assert len(exercise["hints"]) == ExerciseConstants.MAX_HINTS
+            assert "name" in exercise
+            # Hints are optional and generated on-demand incrementally
+            if "hints" in exercise and exercise["hints"] is not None:
+                assert isinstance(exercise["hints"], list)
+                # Hints are generated one at a time, so length can be 0 to MAX_HINTS
+                assert 0 <= len(exercise["hints"]) <= ExerciseConstants.MAX_HINTS
 
     def test_jsonb_attempts_array_integrity(self, client, created_session):
         """CRITICAL: Verify JSONB attempts array maintains integrity"""
@@ -602,6 +562,7 @@ class TestJSONBOperationsIntegrity:
                         "answer_text": f"This is test answer number {i}",
                         "time_spent_seconds": 60,
                         "hints_used": i,
+                        "exercise_index": 0,
                     },
                 )
                 assert (
@@ -636,6 +597,7 @@ class TestErrorHandlingInCriticalFlows:
                 "answer_text": "Should fail",
                 "time_spent_seconds": 60,
                 "hints_used": 0,
+                "exercise_index": 0,
             },
         )
         assert response.status_code == 400

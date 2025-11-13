@@ -7,9 +7,6 @@ Centralized configuration values to avoid magic numbers scattered across the cod
 class ExerciseConstants:
     """Constants related to exercise management and user interactions"""
 
-    # Maximum number of attempts allowed per exercise
-    MAX_ATTEMPTS = 3
-
     # Maximum number of hints available per exercise
     MAX_HINTS = 3
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 
 interface ConfidenceRatingProps {
-  sessionId: string
+  sessionId: string | null
   onRatingSubmitted?: (rating: number) => void
 }
 

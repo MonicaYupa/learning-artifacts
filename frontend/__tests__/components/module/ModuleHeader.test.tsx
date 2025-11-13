@@ -57,7 +57,7 @@ describe('ModuleHeader', () => {
   it('capitalizes skill level correctly', () => {
     render(<ModuleHeader topic="Test Topic" skillLevel="advanced" onBackClick={jest.fn()} />)
 
-    expect(screen.getByText('Advanced')).toBeInTheDocument()
+    expect(screen.getByText(/Module Level: Advanced/i)).toBeInTheDocument()
   })
 
   it('replaces underscores with spaces in topic', () => {

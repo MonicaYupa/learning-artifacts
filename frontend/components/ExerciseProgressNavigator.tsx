@@ -4,7 +4,7 @@ interface ExerciseProgressNavigatorProps {
   exercises: Exercise[]
   currentExerciseIndex: number
   completedExercises: Set<number>
-  exerciseAssessments: Map<number, 'strong' | 'developing' | 'needs_support'>
+  exerciseAssessments: Map<number, 'strong' | 'developing' | 'beginning'>
   justUnlockedExercise: number | null
   onNavigate: (index: number) => void
 }
@@ -49,9 +49,9 @@ export default function ExerciseProgressNavigator({
               if (assessment === 'strong') {
                 return 'border-green-400 bg-gradient-to-br from-green-100 to-green-50 text-green-700 hover:scale-105 hover:border-green-500 hover:shadow-md cursor-pointer'
               } else if (assessment === 'developing') {
+                return 'border-blue-400 bg-gradient-to-br from-blue-100 to-blue-50 text-blue-700 hover:scale-105 hover:border-blue-500 hover:shadow-md cursor-pointer'
+              } else if (assessment === 'beginning') {
                 return 'border-yellow-400 bg-gradient-to-br from-yellow-100 to-yellow-50 text-yellow-700 hover:scale-105 hover:border-yellow-500 hover:shadow-md cursor-pointer'
-              } else if (assessment === 'needs_support') {
-                return 'border-primary-400 bg-gradient-to-br from-primary-100 to-primary-50 text-primary-700 hover:scale-105 hover:border-primary-500 hover:shadow-md cursor-pointer'
               }
             } else if (isUnlocked) {
               // Unlocked but not attempted

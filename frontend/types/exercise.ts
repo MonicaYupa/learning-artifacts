@@ -11,9 +11,9 @@ export type ExerciseMessage =
       type: 'feedback'
       content: string
       timestamp: Date
-      assessment: 'strong' | 'developing' | 'needs_support'
+      assessment?: 'strong' | 'developing' | 'beginning'
       attemptNumber: number
-      modelAnswer?: string
+      isStreaming?: boolean
     }
 
 export interface Exercise {
@@ -24,7 +24,7 @@ export interface Exercise {
   material?: string
   options?: string[]
   scaffold?: { [key: string]: string }
-  hints: string[]
+  hints?: string[]
 }
 
 export interface ModuleProgress {
@@ -33,5 +33,5 @@ export interface ModuleProgress {
   exerciseHints: Record<number, number>
   exerciseHintMessages: Record<number, ExerciseMessage[]>
   exerciseFeedbackMessages?: Record<number, ExerciseMessage[]>
-  exerciseAssessments: Record<number, 'strong' | 'developing' | 'needs_support'>
+  exerciseAssessments: Record<number, 'strong' | 'developing' | 'beginning'>
 }

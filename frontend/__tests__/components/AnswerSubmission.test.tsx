@@ -1,18 +1,19 @@
 import { render, screen, waitFor } from '@/lib/test-utils/test-utils'
 import userEvent from '@testing-library/user-event'
 import AnswerSubmission from '@/components/AnswerSubmission'
-import type { SubmitResponse } from '@/types/session'
-import { mockSubmitResponseStrong, mockSubmitResponseDeveloping } from '@/lib/test-utils/fixtures'
+import { mockSubmitResponseStrong } from '@/lib/test-utils/fixtures'
 
 // Mock the API service
 jest.mock('@/lib/api/sessions', () => ({
-  submitAnswer: jest.fn(),
+  submitAnswerStream: jest.fn(),
 }))
 
-import { submitAnswer } from '@/lib/api/sessions'
+import { submitAnswerStream } from '@/lib/api/sessions'
 
 describe('AnswerSubmission', () => {
-  const mockSubmitAnswer = submitAnswer as jest.MockedFunction<typeof submitAnswer>
+  const mockSubmitAnswerStream = submitAnswerStream as jest.MockedFunction<
+    typeof submitAnswerStream
+  >
   const mockSessionId = 'session-123'
   const mockOnSubmitSuccess = jest.fn()
 
@@ -29,6 +30,7 @@ describe('AnswerSubmission', () => {
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -46,6 +48,7 @@ describe('AnswerSubmission', () => {
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -66,6 +69,7 @@ describe('AnswerSubmission', () => {
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -84,11 +88,15 @@ describe('AnswerSubmission', () => {
   describe('Submission Flow', () => {
     it('submits answer with correct data', async () => {
       const user = userEvent.setup({ delay: null })
-      mockSubmitAnswer.mockResolvedValueOnce(mockSubmitResponseStrong)
+      mockSubmitAnswerStream.mockImplementation(async (sessionId, submission, callbacks) => {
+        callbacks.onComplete?.(mockSubmitResponseStrong)
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
 
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={2}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -103,28 +111,32 @@ describe('AnswerSubmission', () => {
       await user.click(submitButton)
 
       await waitFor(() => {
-        expect(mockSubmitAnswer).toHaveBeenCalledWith(
+        expect(mockSubmitAnswerStream).toHaveBeenCalledWith(
           mockSessionId,
           expect.objectContaining({
             answer_text: 'This is my comprehensive answer',
             hints_used: 2,
+            exercise_index: 0,
             time_spent_seconds: expect.any(Number),
-          })
+          }),
+          expect.any(Object)
         )
+        expect(submitButton).not.toBeDisabled()
       })
     })
 
     it('shows loading state during submission', async () => {
       const user = userEvent.setup({ delay: null })
-      let resolveSubmit: (value: any) => void
-      const submitPromise = new Promise<SubmitResponse>((resolve) => {
+      let resolveSubmit: () => void
+      const submitPromise = new Promise<void>((resolve) => {
         resolveSubmit = resolve
       })
-      mockSubmitAnswer.mockReturnValue(submitPromise)
+      mockSubmitAnswerStream.mockReturnValue(submitPromise)
 
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -145,16 +157,26 @@ describe('AnswerSubmission', () => {
       expect(submitButton).toBeDisabled()
 
       // Resolve the promise to complete the test
-      resolveSubmit!(mockSubmitResponseStrong)
+      resolveSubmit!()
+
+      // Wait for the finally block to execute and state to settle
+      await waitFor(() => {
+        expect(submitButton).not.toBeDisabled()
+      })
     })
 
     it('calls onSubmitSuccess with response data', async () => {
       const user = userEvent.setup({ delay: null })
-      mockSubmitAnswer.mockResolvedValueOnce(mockSubmitResponseStrong)
+      mockSubmitAnswerStream.mockImplementation(async (sessionId, submission, callbacks) => {
+        callbacks.onComplete?.(mockSubmitResponseStrong)
+        // Small delay to ensure finally block executes
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
 
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -171,15 +193,24 @@ describe('AnswerSubmission', () => {
       await waitFor(() => {
         expect(mockOnSubmitSuccess).toHaveBeenCalledWith(mockSubmitResponseStrong, 'My answer')
       })
+
+      // Wait for the finally block to complete and state to settle
+      await waitFor(() => {
+        expect(submitButton).not.toBeDisabled()
+      })
     })
 
     it('keeps textarea content after successful submission', async () => {
       const user = userEvent.setup({ delay: null })
-      mockSubmitAnswer.mockResolvedValueOnce(mockSubmitResponseStrong)
+      mockSubmitAnswerStream.mockImplementation(async (sessionId, submission, callbacks) => {
+        callbacks.onComplete?.(mockSubmitResponseStrong)
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
 
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -198,6 +229,7 @@ describe('AnswerSubmission', () => {
 
       await waitFor(() => {
         expect(mockOnSubmitSuccess).toHaveBeenCalled()
+        expect(submitButton).not.toBeDisabled()
       })
 
       // Answer should remain visible after submission
@@ -208,11 +240,15 @@ describe('AnswerSubmission', () => {
   describe('Error Handling', () => {
     it('displays error message on API failure', async () => {
       const user = userEvent.setup({ delay: null })
-      mockSubmitAnswer.mockRejectedValueOnce(new Error('Failed to submit answer'))
+      mockSubmitAnswerStream.mockImplementation(async (sessionId, submission, callbacks) => {
+        callbacks.onError?.('Failed to submit answer')
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
 
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -230,6 +266,7 @@ describe('AnswerSubmission', () => {
         () => {
           expect(screen.getByText(/failed to submit/i)).toBeInTheDocument()
           expect(mockOnSubmitSuccess).not.toHaveBeenCalled()
+          expect(submitButton).not.toBeDisabled()
         },
         { timeout: 3000 }
       )
@@ -237,13 +274,20 @@ describe('AnswerSubmission', () => {
 
     it('allows retry after error', async () => {
       const user = userEvent.setup({ delay: null })
-      mockSubmitAnswer
-        .mockRejectedValueOnce(new Error('Failed to submit answer'))
-        .mockResolvedValueOnce(mockSubmitResponseStrong)
+      mockSubmitAnswerStream
+        .mockImplementationOnce(async (sessionId, submission, callbacks) => {
+          callbacks.onError?.('Failed to submit answer')
+          await new Promise((resolve) => setTimeout(resolve, 0))
+        })
+        .mockImplementationOnce(async (sessionId, submission, callbacks) => {
+          callbacks.onComplete?.(mockSubmitResponseStrong)
+          await new Promise((resolve) => setTimeout(resolve, 0))
+        })
 
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -270,6 +314,7 @@ describe('AnswerSubmission', () => {
       await waitFor(
         () => {
           expect(mockOnSubmitSuccess).toHaveBeenCalledWith(mockSubmitResponseStrong, 'My answer')
+          expect(submitButton).not.toBeDisabled()
         },
         { timeout: 3000 }
       )
@@ -277,11 +322,15 @@ describe('AnswerSubmission', () => {
 
     it('maintains answer text on error', async () => {
       const user = userEvent.setup({ delay: null })
-      mockSubmitAnswer.mockRejectedValueOnce(new Error('Failed to submit answer'))
+      mockSubmitAnswerStream.mockImplementation(async (sessionId, submission, callbacks) => {
+        callbacks.onError?.('Failed to submit answer')
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
 
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -301,6 +350,7 @@ describe('AnswerSubmission', () => {
         () => {
           expect(screen.getByText(/failed to submit/i)).toBeInTheDocument()
           expect(textarea.value).toBe('My answer')
+          expect(submitButton).not.toBeDisabled()
         },
         { timeout: 3000 }
       )
@@ -310,11 +360,15 @@ describe('AnswerSubmission', () => {
   describe('Time Tracking', () => {
     it('tracks time spent on exercise', async () => {
       const user = userEvent.setup({ delay: null })
-      mockSubmitAnswer.mockResolvedValueOnce(mockSubmitResponseStrong)
+      mockSubmitAnswerStream.mockImplementation(async (sessionId, submission, callbacks) => {
+        callbacks.onComplete?.(mockSubmitResponseStrong)
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
 
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -329,17 +383,20 @@ describe('AnswerSubmission', () => {
       await user.click(submitButton)
 
       await waitFor(() => {
-        expect(mockSubmitAnswer).toHaveBeenCalledWith(
+        expect(mockSubmitAnswerStream).toHaveBeenCalledWith(
           mockSessionId,
           expect.objectContaining({
             time_spent_seconds: expect.any(Number),
             answer_text: 'My answer',
             hints_used: 0,
-          })
+            exercise_index: 0,
+          }),
+          expect.any(Object)
         )
 
-        const call = mockSubmitAnswer.mock.calls[0][1]
+        const call = mockSubmitAnswerStream.mock.calls[0][1]
         expect(call.time_spent_seconds).toBeGreaterThanOrEqual(0)
+        expect(submitButton).not.toBeDisabled()
       })
     })
   })
@@ -349,6 +406,7 @@ describe('AnswerSubmission', () => {
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -361,11 +419,15 @@ describe('AnswerSubmission', () => {
 
     it('announces submission status with aria-live', async () => {
       const user = userEvent.setup({ delay: null })
-      mockSubmitAnswer.mockResolvedValueOnce(mockSubmitResponseStrong)
+      mockSubmitAnswerStream.mockImplementation(async (sessionId, submission, callbacks) => {
+        callbacks.onComplete?.(mockSubmitResponseStrong)
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
 
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -381,15 +443,24 @@ describe('AnswerSubmission', () => {
 
       // Should have status region for screen readers
       expect(screen.getByRole('status')).toBeInTheDocument()
+
+      // Wait for state to settle
+      await waitFor(() => {
+        expect(submitButton).not.toBeDisabled()
+      })
     })
 
     it('supports keyboard navigation', async () => {
       const user = userEvent.setup({ delay: null })
-      mockSubmitAnswer.mockResolvedValueOnce(mockSubmitResponseStrong)
+      mockSubmitAnswerStream.mockImplementation(async (sessionId, submission, callbacks) => {
+        callbacks.onComplete?.(mockSubmitResponseStrong)
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
 
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -412,13 +483,15 @@ describe('AnswerSubmission', () => {
   describe('Prevent Double Submission', () => {
     it('prevents multiple simultaneous submissions', async () => {
       const user = userEvent.setup({ delay: null })
-      mockSubmitAnswer.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(mockSubmitResponseStrong), 1000))
-      )
+      mockSubmitAnswerStream.mockImplementation(async (_sessionId, _submission, callbacks) => {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        callbacks.onComplete?.(mockSubmitResponseStrong)
+      })
 
       render(
         <AnswerSubmission
           sessionId={mockSessionId}
+          exerciseIndex={0}
           hintsUsed={0}
           onSubmitSuccess={mockOnSubmitSuccess}
         />
@@ -432,17 +505,21 @@ describe('AnswerSubmission', () => {
       })
 
       // Click multiple times rapidly
-      user.click(submitButton)
-      user.click(submitButton)
-      user.click(submitButton)
+      await user.click(submitButton)
+      await user.click(submitButton)
+      await user.click(submitButton)
 
       // Wait for the async operations to settle
-      await waitFor(() => {
-        expect(mockOnSubmitSuccess).toHaveBeenCalled()
-      })
+      await waitFor(
+        () => {
+          expect(mockOnSubmitSuccess).toHaveBeenCalled()
+          expect(submitButton).not.toBeDisabled()
+        },
+        { timeout: 2000 }
+      )
 
       // Should only submit once
-      expect(mockSubmitAnswer).toHaveBeenCalledTimes(1)
+      expect(mockSubmitAnswerStream).toHaveBeenCalledTimes(1)
     })
   })
 })

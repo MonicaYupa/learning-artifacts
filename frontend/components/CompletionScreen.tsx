@@ -7,14 +7,14 @@ import ConfidenceRating from './ConfidenceRating'
 interface CompletionScreenProps {
   moduleTopic?: string
   moduleDomain?: string
-  sessionId: string
+  sessionId: string | null
   isOpen: boolean
   onClose?: () => void
 }
 
 /**
  * CompletionScreen Component (Modal Overlay)
- * Displays celebration, summary, confidence rating, and navigation after module completion
+ * Displays confidence rating and navigation after module completion
  */
 function CompletionScreen({
   moduleTopic,

@@ -5,7 +5,7 @@ Handles PostgreSQL connections to Supabase database with connection pooling
 
 import logging
 from contextlib import contextmanager
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 import psycopg

@@ -8,14 +8,14 @@ interface UseModuleProgressReturn {
   exerciseHints: Map<number, number>
   exerciseHintMessages: Map<number, ExerciseMessage[]>
   exerciseFeedbackMessages: Map<number, ExerciseMessage[]>
-  exerciseAssessments: Map<number, 'strong' | 'developing' | 'needs_support'>
+  exerciseAssessments: Map<number, 'strong' | 'developing' | 'beginning'>
   isLoading: boolean
   completeExercise: (index: number) => void
   saveResponse: (index: number, response: string) => void
   saveHints: (index: number, hintsUsed: number) => void
   saveHintMessage: (index: number, message: ExerciseMessage) => void
   saveFeedbackMessage: (index: number, message: ExerciseMessage) => void
-  saveAssessment: (index: number, assessment: 'strong' | 'developing' | 'needs_support') => void
+  saveAssessment: (index: number, assessment: 'strong' | 'developing' | 'beginning') => void
 }
 
 /**
@@ -34,7 +34,7 @@ export function useModuleProgress(moduleId: string | string[]): UseModuleProgres
     Map<number, ExerciseMessage[]>
   >(new Map())
   const [exerciseAssessments, setExerciseAssessments] = useState<
-    Map<number, 'strong' | 'developing' | 'needs_support'>
+    Map<number, 'strong' | 'developing' | 'beginning'>
   >(new Map())
   const [isLoading, setIsLoading] = useState(true)
 
@@ -94,7 +94,7 @@ export function useModuleProgress(moduleId: string | string[]): UseModuleProgres
             new Map(
               Object.entries(progress.exerciseAssessments).map(([k, v]) => [
                 Number(k),
-                v as 'strong' | 'developing' | 'needs_support',
+                v as 'strong' | 'developing' | 'beginning',
               ])
             )
           )
@@ -178,7 +178,7 @@ export function useModuleProgress(moduleId: string | string[]): UseModuleProgres
   }, [])
 
   const saveAssessment = useCallback(
-    (index: number, assessment: 'strong' | 'developing' | 'needs_support') => {
+    (index: number, assessment: 'strong' | 'developing' | 'beginning') => {
       setExerciseAssessments((prev) => {
         const newMap = new Map(prev)
         newMap.set(index, assessment)

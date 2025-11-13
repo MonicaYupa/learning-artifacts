@@ -1,7 +1,9 @@
 import { useCallback } from 'react'
+import { updateSessionExerciseIndex } from '@/lib/api/sessions'
 import type { ExerciseMessage } from '@/types/exercise'
 
 interface UseExerciseNavigationProps {
+  sessionId: string | null
   currentExerciseIndex: number
   totalExercises: number
   completedExercises: Set<number>
@@ -22,6 +24,7 @@ interface UseExerciseNavigationProps {
  * Handles moving between exercises and resetting state appropriately
  */
 export function useExerciseNavigation({
+  sessionId,
   currentExerciseIndex,
   totalExercises,
   completedExercises,
@@ -79,7 +82,7 @@ export function useExerciseNavigation({
   /**
    * Advance to the next exercise or show completion modal
    */
-  const advanceToNextExercise = useCallback(() => {
+  const advanceToNextExercise = useCallback(async () => {
     // Mark current exercise as completed before advancing
     completeExercise(currentExerciseIndex)
 
@@ -88,11 +91,22 @@ export function useExerciseNavigation({
       const nextExerciseIndex = currentExerciseIndex + 1
       setCurrentExerciseIndex(nextExerciseIndex)
       resetExerciseState(nextExerciseIndex)
+
+      // Sync exercise index with backend
+      if (sessionId) {
+        try {
+          await updateSessionExerciseIndex(sessionId, nextExerciseIndex)
+        } catch (error) {
+          console.error('Failed to update session exercise index:', error)
+          // Continue anyway - this is not critical
+        }
+      }
     } else {
       // Module complete - show completion modal
       setShowCompletionModal(true)
     }
   }, [
+    sessionId,
     currentExerciseIndex,
     totalExercises,
     completeExercise,
@@ -105,7 +119,7 @@ export function useExerciseNavigation({
    * Navigate to a specific exercise (if unlocked)
    */
   const navigateToExercise = useCallback(
-    (exerciseIndex: number) => {
+    async (exerciseIndex: number) => {
       // Check if exercise is unlocked (completed, current, or next in sequence)
       const isCompleted = completedExercises.has(exerciseIndex)
       const isCurrent = exerciseIndex === currentExerciseIndex
@@ -119,8 +133,24 @@ export function useExerciseNavigation({
       // Navigate to selected exercise
       setCurrentExerciseIndex(exerciseIndex)
       resetExerciseState(exerciseIndex)
+
+      // Sync exercise index with backend
+      if (sessionId) {
+        try {
+          await updateSessionExerciseIndex(sessionId, exerciseIndex)
+        } catch (error) {
+          console.error('Failed to update session exercise index:', error)
+          // Continue anyway - this is not critical
+        }
+      }
     },
-    [completedExercises, currentExerciseIndex, setCurrentExerciseIndex, resetExerciseState]
+    [
+      sessionId,
+      completedExercises,
+      currentExerciseIndex,
+      setCurrentExerciseIndex,
+      resetExerciseState,
+    ]
   )
 
   /**

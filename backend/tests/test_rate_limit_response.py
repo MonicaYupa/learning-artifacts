@@ -3,38 +3,18 @@ Unit tests for 429 Rate Limit error responses with Retry-After header
 Tests that rate limit errors return proper retry_after information to clients
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from anthropic import RateLimitError
 from fastapi import status
-from fastapi.testclient import TestClient
-from main import app
-from middleware.auth import get_current_user_id
-
-
-# Mock authentication to bypass auth requirements
-def mock_get_current_user_id():
-    """Override dependency to return test user ID"""
-    return 1
-
-
-@pytest.fixture(autouse=True)
-def override_auth_dependency():
-    """Override authentication dependency for all tests"""
-    app.dependency_overrides[get_current_user_id] = mock_get_current_user_id
-    yield
-    app.dependency_overrides.clear()
-
-
-client = TestClient(app)
 
 
 class TestRateLimitResponse:
     """Test 429 responses include retry_after field"""
 
-    @patch("routers.modules.generate_module")
-    def test_rate_limit_error_returns_retry_after(self, mock_generate):
+    @patch("routers.modules.generate_module", new_callable=AsyncMock)
+    def test_rate_limit_error_returns_retry_after(self, mock_generate, client):
         """429 error should include retry_after in response JSON and HTTP headers"""
         # Create mock RateLimitError with retry_after
         response_mock = Mock()
@@ -46,11 +26,10 @@ class TestRateLimitResponse:
 
         mock_generate.side_effect = error
 
-        # Make request to module generation endpoint
+        # Make request using topic and skill_level directly (avoids extract_topic_and_level)
         response = client.post(
             "/api/modules/generate",
-            json={"message": "I want to learn Python"},
-            headers={"Authorization": "Bearer test-token"},
+            json={"topic": "Python", "skill_level": "beginner"},
         )
 
         # Should return 429 status
@@ -68,8 +47,8 @@ class TestRateLimitResponse:
         assert "retry-after" in response.headers
         assert response.headers["retry-after"] == "30"
 
-    @patch("routers.modules.generate_module")
-    def test_rate_limit_without_retry_after_header(self, mock_generate):
+    @patch("routers.modules.generate_module", new_callable=AsyncMock)
+    def test_rate_limit_without_retry_after_header(self, mock_generate, client):
         """429 error without retry_after should still work"""
         # Create mock RateLimitError without retry_after
         response_mock = Mock()
@@ -82,8 +61,7 @@ class TestRateLimitResponse:
         # Make request
         response = client.post(
             "/api/modules/generate",
-            json={"message": "I want to learn Python"},
-            headers={"Authorization": "Bearer test-token"},
+            json={"topic": "Python", "skill_level": "beginner"},
         )
 
         # Should return 429 status
@@ -96,8 +74,8 @@ class TestRateLimitResponse:
         assert "message" in data["detail"]
         assert "retry_after" not in data["detail"]
 
-    @patch("routers.modules.generate_module")
-    def test_non_rate_limit_error_no_retry_after(self, mock_generate):
+    @patch("routers.modules.generate_module", new_callable=AsyncMock)
+    def test_non_rate_limit_error_no_retry_after(self, mock_generate, client):
         """Non-429 errors should not include retry_after"""
         # Create a generic error
         mock_generate.side_effect = Exception("Generic error")
@@ -105,8 +83,7 @@ class TestRateLimitResponse:
         # Make request
         response = client.post(
             "/api/modules/generate",
-            json={"message": "I want to learn Python"},
-            headers={"Authorization": "Bearer test-token"},
+            json={"topic": "Python", "skill_level": "beginner"},
         )
 
         # Should return 500 status

@@ -5,7 +5,7 @@ import { requestHint } from '@/lib/api/sessions'
 import type { HintResponse } from '@/types/session'
 
 interface HintSystemProps {
-  sessionId: string
+  sessionId: string | null
   currentHintLevel: number
   maxHints: number
   onHintReceived: (response: HintResponse) => void
@@ -30,7 +30,6 @@ export default function HintSystem({
   const [error, setError] = useState<string | null>(null)
 
   const allHintsUsed = currentHintLevel >= maxHints
-  const remainingHints = maxHints - currentHintLevel
 
   const handleRequestHint = async () => {
     if (isLoading || allHintsUsed) return
@@ -38,8 +37,14 @@ export default function HintSystem({
     setIsLoading(true)
     setError(null)
 
+    if (!sessionId) {
+      setError('Session not ready. Please wait...')
+      setIsLoading(false)
+      return
+    }
+
     try {
-      const response = await requestHint(sessionId)
+      const response = await requestHint(sessionId, currentHintLevel + 1)
       onHintReceived(response)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load hint'

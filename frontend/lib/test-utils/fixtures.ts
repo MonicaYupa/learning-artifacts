@@ -35,33 +35,21 @@ export const mockHints: Hint[] = [
 
 // Mock hint responses
 export const mockHintResponse1: HintResponse = {
-  hint: mockHints[0].content,
+  hint_text: mockHints[0].content,
   hint_level: 1,
-  remaining_hints: 2,
-  session: {
-    ...mockSession,
-    hints_requested: [mockHints[0]],
-  },
+  hints_remaining: 2,
 }
 
 export const mockHintResponse2: HintResponse = {
-  hint: mockHints[1].content,
+  hint_text: mockHints[1].content,
   hint_level: 2,
-  remaining_hints: 1,
-  session: {
-    ...mockSession,
-    hints_requested: [mockHints[0], mockHints[1]],
-  },
+  hints_remaining: 1,
 }
 
 export const mockHintResponse3: HintResponse = {
-  hint: mockHints[2].content,
+  hint_text: mockHints[2].content,
   hint_level: 3,
-  remaining_hints: 0,
-  session: {
-    ...mockSession,
-    hints_requested: mockHints,
-  },
+  hints_remaining: 0,
 }
 
 // Mock attempts
@@ -91,7 +79,7 @@ export const mockNeedsSupportAttempt: Attempt = {
   answer_text: 'This is a weak answer',
   time_spent_seconds: 120,
   hints_used: 2,
-  assessment: 'needs_support',
+  assessment: 'beginning',
   feedback: "Let's work through this together. Start by identifying the main claim.",
   submitted_at: '2024-01-01T00:05:00Z',
 }
@@ -103,7 +91,6 @@ export const mockSubmitResponseStrong: SubmitResponse = {
   feedback: 'Excellent analysis! You correctly identified the key points.',
   attempt_number: 1,
   hint_available: false,
-  model_answer_available: false,
 }
 
 export const mockSubmitResponseDeveloping: SubmitResponse = {
@@ -113,27 +100,22 @@ export const mockSubmitResponseDeveloping: SubmitResponse = {
     'Good start! Consider expanding on the relationship between the evidence and conclusion.',
   attempt_number: 2,
   hint_available: true,
-  model_answer_available: false,
 }
 
 export const mockSubmitResponseNeedsSupport: SubmitResponse = {
-  assessment: 'needs_support',
+  assessment: 'beginning',
   internal_score: 0.4,
   feedback: "Let's work through this together. Start by identifying the main claim.",
   attempt_number: 2,
   hint_available: true,
-  model_answer_available: false,
 }
 
 export const mockSubmitResponseThirdAttempt: SubmitResponse = {
-  assessment: 'needs_support',
+  assessment: 'beginning',
   internal_score: 0.3,
   feedback: "Here's how an expert might approach this:",
   attempt_number: 3,
   hint_available: false,
-  model_answer_available: true,
-  model_answer:
-    'A model answer would analyze the argument structure, identify assumptions, evaluate evidence, and provide a clear conclusion...',
 }
 
 // API error responses

@@ -43,6 +43,7 @@ export const createMockContextValue = (
     // Actions (mock functions)
     handleHintReceived: jest.fn(),
     handleSubmitSuccess: jest.fn(),
+    handleStreamingUpdate: jest.fn(),
     toggleHintCollapse: jest.fn(),
     advanceToNextExercise: jest.fn(),
     handleCompleteModule: jest.fn(),

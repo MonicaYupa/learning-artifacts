@@ -39,7 +39,7 @@ class Assessment(str, Enum):
 
     STRONG = "strong"
     DEVELOPING = "developing"
-    NEEDS_SUPPORT = "needs_support"
+    BEGINNING = "beginning"
 
 
 # User Models
@@ -59,15 +59,13 @@ class ExerciseSchema(BaseModel):
     """Exercise schema embedded in modules"""
 
     sequence: int
+    name: str
     type: ExerciseType
     prompt: str
     material: Optional[str] = None
     options: Optional[List[str]] = None
     scaffold: Optional[Dict[str, str]] = None
-    hints: List[str] = Field(..., min_length=3, max_length=3)
-    validation_criteria: Dict[str, str]
-    model_answer: str
-    model_explanation: str
+    hints: Optional[List[str]] = Field(None, min_length=1, max_length=3)
     estimated_minutes: int
 
 
@@ -155,9 +153,10 @@ class SessionResponse(BaseModel):
 class AnswerSubmitRequest(BaseModel):
     """Request to submit an answer"""
 
-    answer_text: str = Field(..., min_length=10, max_length=10000)
+    answer_text: str = Field(..., min_length=1, max_length=10000)
     time_spent_seconds: int = Field(..., ge=0, le=86400)  # Max 24 hours
     hints_used: int = Field(..., ge=0, le=3)
+    exercise_index: int = Field(..., ge=0)
 
 
 class AnswerSubmitResponse(BaseModel):
@@ -168,7 +167,6 @@ class AnswerSubmitResponse(BaseModel):
     feedback: str
     attempt_number: int
     hint_available: bool
-    model_answer_available: bool
 
 
 class HintRequest(BaseModel):

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import ProtectedRoute from '@/components/ProtectedRoute'
@@ -18,11 +18,11 @@ import {
   CELEBRATION_DURATION,
   UNLOCK_ANIMATION_DURATION,
   MOBILE_BREAKPOINT,
-  SESSION_ID_PREFIX,
   DEFAULT_MAX_HINTS,
   UI_MESSAGES,
 } from '@/lib/constants/module'
-import type { HintResponse, SubmitResponse } from '@/types/session'
+import { createSession } from '@/lib/api/sessions'
+import type { HintResponse, SubmitResponse, AssessmentLevel } from '@/types/session'
 import type { Exercise, ExerciseMessage } from '@/types/exercise'
 
 interface Module {
@@ -40,7 +40,8 @@ export default function ModulePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
-  const [sessionId] = useState(`${SESSION_ID_PREFIX}${Date.now()}`)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const hasInitialSyncRef = useRef(false)
 
   const router = useRouter()
   const params = useParams()
@@ -87,7 +88,8 @@ export default function ModulePage() {
   } = useModuleProgress(params.id as string)
 
   // Use custom hook for navigation
-  const { resetExerciseState, advanceToNextExercise, navigateToExercise } = useExerciseNavigation({
+  const { advanceToNextExercise, navigateToExercise } = useExerciseNavigation({
+    sessionId,
     currentExerciseIndex,
     totalExercises: module?.exercises?.length || 0,
     completedExercises,
@@ -131,6 +133,15 @@ export default function ModulePage() {
 
         const data = await response.json()
         setModule(data)
+
+        // Create a backend session for this module
+        try {
+          const newSession = await createSession(params.id as string)
+          setSessionId(newSession.id)
+        } catch (sessionErr) {
+          console.error('Failed to create session:', sessionErr)
+          // Continue without failing - we can still show the module
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred')
       } finally {
@@ -150,13 +161,28 @@ export default function ModulePage() {
 
       // If all exercises are completed, show the last one
       // Otherwise, show the next incomplete exercise
-      if (nextExercise >= totalExercises) {
-        setCurrentExerciseIndex(totalExercises - 1)
-      } else {
-        setCurrentExerciseIndex(nextExercise)
-      }
+      const targetIndex = nextExercise >= totalExercises ? totalExercises - 1 : nextExercise
+      setCurrentExerciseIndex(targetIndex)
     }
   }, [module, completedExercises.size])
+
+  // Sync current exercise index with backend when session becomes available
+  useEffect(() => {
+    if (sessionId && module && !hasInitialSyncRef.current) {
+      // Only sync if we're not on the first exercise (backend defaults to 0)
+      if (currentExerciseIndex > 0) {
+        hasInitialSyncRef.current = true
+        import('@/lib/api/sessions').then(({ updateSessionExerciseIndex }) => {
+          updateSessionExerciseIndex(sessionId, currentExerciseIndex).catch((error) => {
+            console.error('Failed to sync exercise index on load:', error)
+          })
+        })
+      } else {
+        // Mark as synced even if we didn't need to update (already at 0)
+        hasInitialSyncRef.current = true
+      }
+    }
+  }, [sessionId, module, currentExerciseIndex])
 
   // Restore hints, hint messages, and feedback messages when current exercise changes
   useEffect(() => {
@@ -184,7 +210,7 @@ export default function ModulePage() {
       const newMessage: ExerciseMessage = {
         id: `hint-${Date.now()}`,
         type: 'hint',
-        content: response.hint,
+        content: response.hint_text,
         timestamp: new Date(),
       }
 
@@ -222,7 +248,6 @@ export default function ModulePage() {
         timestamp: new Date(),
         assessment: response.assessment,
         attemptNumber: currentAttemptNumber,
-        modelAnswer: response.model_answer,
       }
 
       // Replace old feedback with new feedback (keep only hints)
@@ -288,6 +313,56 @@ export default function ModulePage() {
     completeExercise(currentExerciseIndex)
     setShowCompletionModal(true)
   }, [currentExerciseIndex, completeExercise, setShowCompletionModal])
+
+  const handleStreamingUpdate = useCallback(
+    (feedback: string, isComplete: boolean, assessment?: AssessmentLevel) => {
+      // Find or create a streaming feedback message
+      setExerciseMessages((prev) => {
+        const streamingId = `streaming-feedback-${currentExerciseIndex}`
+        const existingStreamingIndex = prev.findIndex((msg) => msg.id === streamingId)
+
+        if (!isComplete) {
+          // Update or create streaming message
+          const streamingMessage: ExerciseMessage = {
+            id: streamingId,
+            type: 'feedback',
+            content: feedback,
+            timestamp: new Date(),
+            assessment: assessment, // undefined during streaming
+            attemptNumber: currentAttemptNumber,
+            isStreaming: true,
+          }
+
+          if (existingStreamingIndex >= 0) {
+            // Update existing streaming message
+            const newMessages = [...prev]
+            newMessages[existingStreamingIndex] = streamingMessage
+            return newMessages
+          } else {
+            // Create new streaming message (remove old feedback, keep hints)
+            return [...prev.filter((msg) => msg.type === 'hint'), streamingMessage]
+          }
+        } else {
+          // Streaming complete - replace streaming message with final one
+          const finalMessage: ExerciseMessage = {
+            id: `feedback-${Date.now()}`,
+            type: 'feedback',
+            content: feedback,
+            timestamp: new Date(),
+            assessment: assessment,
+            attemptNumber: currentAttemptNumber,
+            isStreaming: false,
+          }
+
+          return [
+            ...prev.filter((msg) => msg.type === 'hint' || msg.id !== streamingId),
+            finalMessage,
+          ]
+        }
+      })
+    },
+    [currentExerciseIndex, currentAttemptNumber]
+  )
 
   const handleCloseCompletionModal = useCallback(() => {
     setShowCompletionModal(false)
@@ -356,6 +431,7 @@ export default function ModulePage() {
     // Actions
     handleHintReceived,
     handleSubmitSuccess,
+    handleStreamingUpdate,
     toggleHintCollapse,
     advanceToNextExercise,
     handleCompleteModule,

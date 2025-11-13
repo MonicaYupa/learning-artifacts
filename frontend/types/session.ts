@@ -1,6 +1,6 @@
 // Session and exercise interaction types
 
-export type AssessmentLevel = 'strong' | 'developing' | 'needs_support'
+export type AssessmentLevel = 'strong' | 'developing' | 'beginning'
 
 export interface Hint {
   level: number
@@ -32,10 +32,9 @@ export interface Session {
 }
 
 export interface HintResponse {
-  hint: string
+  hint_text: string
   hint_level: number
-  remaining_hints: number
-  session: Session
+  hints_remaining: number
 }
 
 export interface SubmitResponse {
@@ -44,8 +43,6 @@ export interface SubmitResponse {
   feedback: string
   attempt_number: number
   hint_available: boolean
-  model_answer_available: boolean
-  model_answer?: string
 }
 
 export interface ApiError {

@@ -25,6 +25,7 @@ function WorkspacePanel() {
     activeTab,
     handleHintReceived,
     handleSubmitSuccess,
+    handleStreamingUpdate,
     toggleHintCollapse,
     advanceToNextExercise,
     handleCompleteModule,
@@ -52,8 +53,10 @@ function WorkspacePanel() {
           <AnswerSubmission
             key={`exercise-${currentExerciseIndex}`}
             sessionId={sessionId}
+            exerciseIndex={currentExerciseIndex}
             hintsUsed={hintsUsed}
             onSubmitSuccess={handleSubmitSuccess}
+            onStreamingUpdate={handleStreamingUpdate}
             initialAnswer={initialAnswer}
             renderFeedback={() => (
               <>
@@ -71,6 +74,7 @@ function WorkspacePanel() {
                               feedback={message.content}
                               attemptNumber={message.attemptNumber}
                               modelAnswer={message.modelAnswer}
+                              isStreaming={message.isStreaming}
                             />
                           </div>
                         )}

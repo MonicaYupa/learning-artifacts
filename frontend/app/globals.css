@@ -10,39 +10,39 @@
   --breakpoint-xl: 80rem; /* 1280px */
 
   /* Anthropic brand colors - Primary palette */
-  --color-primary-50: #fef6f3;
-  --color-primary-100: #fde9e1;
-  --color-primary-200: #fbd2c3;
-  --color-primary-300: #f7b099;
-  --color-primary-400: #f1875e;
-  --color-primary-500: #d97757; /* Anthropic Orange */
-  --color-primary-600: #cc785c;
-  --color-primary-700: #b86547;
-  --color-primary-800: #9a503a;
-  --color-primary-900: #7d4332;
+  --color-primary-50: oklch(97.5% 0.015 45);
+  --color-primary-100: oklch(94% 0.035 45);
+  --color-primary-200: oklch(88% 0.06 45);
+  --color-primary-300: oklch(80% 0.095 45);
+  --color-primary-400: oklch(72% 0.13 45);
+  --color-primary-500: oklch(64% 0.125 40); /* Anthropic Orange */
+  --color-primary-600: oklch(60% 0.11 40);
+  --color-primary-700: oklch(53% 0.095 40);
+  --color-primary-800: oklch(45% 0.08 40);
+  --color-primary-900: oklch(38% 0.065 40);
 
   /* Warm neutrals - Cream palette */
-  --color-cream-50: #fdfcfb;
-  --color-cream-100: #faf8f5;
-  --color-cream-200: #f5f1eb;
-  --color-cream-300: #ebe5db;
-  --color-cream-400: #e8e6dc; /* Anthropic Light Gray */
-  --color-cream-500: #d9cfbd;
-  --color-cream-600: #c4b59f;
+  --color-cream-50: oklch(99% 0.005 80);
+  --color-cream-100: oklch(97.5% 0.01 80);
+  --color-cream-200: oklch(95% 0.015 80);
+  --color-cream-300: oklch(91% 0.02 80);
+  --color-cream-400: oklch(91.5% 0.015 85); /* Anthropic Light Gray */
+  --color-cream-500: oklch(85% 0.025 80);
+  --color-cream-600: oklch(77% 0.03 75);
 
   /* Neutral grays for dark backgrounds - Claude UI inspired */
-  --color-neutral-50: #f9fafb;
-  --color-neutral-100: #f3f4f6;
-  --color-neutral-200: #e5e7eb;
-  --color-neutral-300: #d1d5db;
-  --color-neutral-400: #9ca3af;
-  --color-neutral-500: #6b7280;
-  --color-neutral-600: #4b5563;
-  --color-neutral-700: #374151;
-  --color-neutral-800: #2d333b; /* Claude-like background */
-  --color-neutral-850: #242930; /* Slightly darker */
-  --color-neutral-900: #1f2328;
-  --color-neutral-950: #161a1f;
+  --color-neutral-50: oklch(98% 0.002 240);
+  --color-neutral-100: oklch(96% 0.003 240);
+  --color-neutral-200: oklch(91% 0.005 240);
+  --color-neutral-300: oklch(85% 0.007 240);
+  --color-neutral-400: oklch(67% 0.01 240);
+  --color-neutral-500: oklch(52% 0.012 240);
+  --color-neutral-600: oklch(40% 0.015 240);
+  --color-neutral-700: oklch(32% 0.015 240);
+  --color-neutral-800: oklch(25% 0.015 240); /* Claude-like background */
+  --color-neutral-850: oklch(21% 0.015 240); /* Slightly darker */
+  --color-neutral-900: oklch(18% 0.015 240);
+  --color-neutral-950: oklch(13% 0.015 240);
 }
 
 :root {

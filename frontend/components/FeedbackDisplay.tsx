@@ -4,10 +4,11 @@ import { useState } from 'react'
 import type { AssessmentLevel } from '@/types/session'
 
 interface FeedbackDisplayProps {
-  assessment: AssessmentLevel
+  assessment?: AssessmentLevel
   feedback: string
   attemptNumber: number
   modelAnswer?: string
+  isStreaming?: boolean
 }
 
 export default function FeedbackDisplay({
@@ -15,6 +16,7 @@ export default function FeedbackDisplay({
   feedback,
   attemptNumber,
   modelAnswer,
+  isStreaming = false,
 }: FeedbackDisplayProps) {
   const [isCollapsed, setIsCollapsed] = useState(false) // Start expanded
   const getAssessmentStyles = () => {
@@ -28,16 +30,32 @@ export default function FeedbackDisplay({
         }
       case 'developing':
         return {
+          container: 'bg-blue-50 border-blue-300',
+          icon: 'text-blue-600',
+          badge: 'bg-blue-100 text-blue-800',
+          text: 'text-blue-900',
+        }
+      case 'beginning':
+        return {
           container: 'bg-yellow-50 border-yellow-300',
           icon: 'text-yellow-600',
           badge: 'bg-yellow-100 text-yellow-800',
           text: 'text-yellow-900',
         }
-      case 'needs_support':
+      case undefined:
+        // Evaluating state during streaming
         return {
-          container: 'bg-cream-50 border-cream-300',
-          icon: 'text-primary-600',
-          badge: 'bg-primary-100 text-primary-800',
+          container: 'bg-gray-50 border-gray-300',
+          icon: 'text-gray-600',
+          badge: 'bg-gray-100 text-gray-800',
+          text: 'text-gray-900',
+        }
+      default:
+        // Fallback for unknown states
+        return {
+          container: 'bg-gray-50 border-gray-300',
+          icon: 'text-gray-600',
+          badge: 'bg-gray-100 text-gray-800',
           text: 'text-gray-900',
         }
     }
@@ -81,7 +99,7 @@ export default function FeedbackDisplay({
             />
           </svg>
         )
-      case 'needs_support':
+      case 'beginning':
         return (
           <svg
             className="h-6 w-6"
@@ -99,6 +117,48 @@ export default function FeedbackDisplay({
             />
           </svg>
         )
+      case undefined:
+        return (
+          <svg
+            className="h-6 w-6 animate-spin"
+            fill="none"
+            viewBox="0 0 24 24"
+            role="img"
+            aria-label="Evaluating"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            ></circle>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+        )
+      default:
+        return (
+          <svg
+            className="h-6 w-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            role="img"
+            aria-label="Warning"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        )
     }
   }
 
@@ -108,8 +168,12 @@ export default function FeedbackDisplay({
         return 'Strong'
       case 'developing':
         return 'Developing'
-      case 'needs_support':
-        return 'Needs Support'
+      case 'beginning':
+        return 'Beginning'
+      case undefined:
+        return 'Evaluating...'
+      default:
+        return 'Unknown'
     }
   }
 
@@ -158,6 +222,12 @@ export default function FeedbackDisplay({
             aria-live="assertive"
           >
             {feedback}
+            {isStreaming && (
+              <span
+                className="inline-block ml-1 w-2 h-4 bg-current animate-pulse"
+                aria-label="Generating feedback"
+              />
+            )}
           </div>
 
           {/* Model answer section */}

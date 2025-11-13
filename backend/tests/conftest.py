@@ -3,6 +3,7 @@ Pytest configuration and shared fixtures
 """
 
 import json
+import os
 import uuid
 from datetime import datetime, timedelta
 from typing import Dict, List
@@ -15,6 +16,28 @@ from jose import jwt
 
 
 @pytest.fixture(scope="session", autouse=True)
+def _disable_sentry():
+    """
+    Disable Sentry for all tests.
+    This fixture runs once per test session and ensures Sentry is disabled
+    by setting the TESTING environment variable.
+    """
+    # Store original value if it exists
+    original_value = os.environ.get("TESTING")
+
+    # Set TESTING=true to disable Sentry
+    os.environ["TESTING"] = "true"
+
+    yield
+
+    # Restore original value after all tests
+    if original_value is not None:
+        os.environ["TESTING"] = original_value
+    else:
+        os.environ.pop("TESTING", None)
+
+
+@pytest.fixture(scope="session", autouse=True)
 def _init_database_pool():
     """
     Initialize database pool once for the entire test session.
@@ -23,6 +46,20 @@ def _init_database_pool():
     init_db_pool()
     yield
     close_db_pool()
+
+
+@pytest.fixture(autouse=True)
+def _cleanup_dependency_overrides():
+    """
+    Ensure app.dependency_overrides is cleared after every test.
+    This is a safety net to prevent test pollution even if individual
+    fixtures or tests fail to clean up properly.
+    """
+    yield
+    # Clear after each test completes (success or failure)
+    from main import app
+
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture(scope="function")
@@ -208,62 +245,32 @@ def sample_exercise_data() -> List[Dict]:
     return [
         {
             "sequence": 1,
+            "name": "Python Basics",
             "type": "analysis",
             "prompt": "What is Python?",
             "material": None,
             "options": None,
             "scaffold": None,
-            "hints": [
-                "Think about programming languages",
-                "It's a high-level language",
-                "Created by Guido van Rossum",
-            ],
-            "validation_criteria": {
-                "key_concepts": "programming language, high-level, interpreted",
-                "completeness": "Should mention it's a programming language",
-            },
-            "model_answer": "Python is a high-level programming language.",
-            "model_explanation": "Python is a versatile, high-level programming language known for its simplicity and readability.",
             "estimated_minutes": 5,
         },
         {
             "sequence": 2,
+            "name": "Understanding Variables",
             "type": "analysis",
             "prompt": "What is a variable?",
             "material": None,
             "options": None,
             "scaffold": None,
-            "hints": [
-                "Think about data storage",
-                "It holds a value",
-                "Can be reassigned",
-            ],
-            "validation_criteria": {
-                "key_concepts": "storage, value, container",
-                "completeness": "Should explain the concept of storing data",
-            },
-            "model_answer": "A variable is a container for storing data values.",
-            "model_explanation": "Variables are named containers that store data values which can be referenced and manipulated in a program.",
             "estimated_minutes": 5,
         },
         {
             "sequence": 3,
+            "name": "Function Concepts",
             "type": "analysis",
             "prompt": "What is a function?",
             "material": None,
             "options": None,
             "scaffold": None,
-            "hints": [
-                "Think about code reuse",
-                "It performs a specific task",
-                "Can accept parameters",
-            ],
-            "validation_criteria": {
-                "key_concepts": "reusable, code block, specific task",
-                "completeness": "Should explain code reusability",
-            },
-            "model_answer": "A function is a reusable block of code.",
-            "model_explanation": "Functions are reusable blocks of code that perform specific tasks and can accept parameters to produce different outputs.",
             "estimated_minutes": 5,
         },
     ]
@@ -310,6 +317,40 @@ def mock_claude_extract_topic():
             return_value={"topic": "Python Basics", "skill_level": "beginner"}
         )
         yield mock
+
+
+# ============================================================================
+# Sentry SDK Mocking Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+def mock_sentry_sdk():
+    """
+    Mock the entire Sentry SDK for isolated testing.
+    This fixture provides properly isolated mocks for all Sentry SDK functions.
+
+    Usage:
+        def test_something(mock_sentry_sdk):
+            # Your test code here
+            # Access mocks via mock_sentry_sdk.set_user, mock_sentry_sdk.set_context, etc.
+    """
+    with (
+        patch("sentry_sdk.set_user") as mock_set_user,
+        patch("sentry_sdk.set_context") as mock_set_context,
+        patch("sentry_sdk.capture_exception") as mock_capture,
+        patch("sentry_sdk.capture_message") as mock_message,
+    ):
+
+        # Create a container object to hold all mocks
+        class SentryMocks:
+            def __init__(self):
+                self.set_user = mock_set_user
+                self.set_context = mock_set_context
+                self.capture_exception = mock_capture
+                self.capture_message = mock_message
+
+        yield SentryMocks()
 
 
 # ============================================================================

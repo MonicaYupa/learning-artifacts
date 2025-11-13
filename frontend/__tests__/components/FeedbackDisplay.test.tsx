@@ -1,6 +1,5 @@
 import { render, screen } from '@/lib/test-utils/test-utils'
 import FeedbackDisplay from '@/components/FeedbackDisplay'
-import type { AssessmentLevel } from '@/types/session'
 
 describe('FeedbackDisplay', () => {
   describe('Strong Assessment', () => {
@@ -35,7 +34,7 @@ describe('FeedbackDisplay', () => {
   })
 
   describe('Developing Assessment', () => {
-    it('renders developing feedback with yellow indicator', () => {
+    it('renders developing feedback with blue indicator', () => {
       render(
         <FeedbackDisplay
           assessment="developing"
@@ -47,7 +46,7 @@ describe('FeedbackDisplay', () => {
       expect(screen.getByText(/good start/i)).toBeInTheDocument()
 
       const container = screen.getByRole('article')
-      expect(container).toHaveClass('bg-yellow-50')
+      expect(container).toHaveClass('bg-blue-50')
     })
 
     it('shows attempt number for developing assessment', () => {
@@ -57,11 +56,11 @@ describe('FeedbackDisplay', () => {
     })
   })
 
-  describe('Needs Support Assessment', () => {
-    it('renders needs_support feedback with constructive message', () => {
+  describe('Beginning Assessment', () => {
+    it('renders beginning feedback with constructive message', () => {
       render(
         <FeedbackDisplay
-          assessment="needs_support"
+          assessment="beginning"
           feedback="Let's work through this together."
           attemptNumber={1}
         />
@@ -70,12 +69,45 @@ describe('FeedbackDisplay', () => {
       expect(screen.getByText(/let's work through this/i)).toBeInTheDocument()
     })
 
-    it('uses neutral styling for needs_support', () => {
-      render(<FeedbackDisplay assessment="needs_support" feedback="Try again!" attemptNumber={1} />)
+    it('uses yellow styling for beginning', () => {
+      render(<FeedbackDisplay assessment="beginning" feedback="Try again!" attemptNumber={1} />)
 
       const container = screen.getByRole('article')
-      // Should have cream/neutral background
-      expect(container).toHaveClass('bg-cream-50')
+      // Should have yellow background
+      expect(container).toHaveClass('bg-yellow-50')
+    })
+  })
+
+  describe('Evaluating State', () => {
+    it('renders evaluating state during streaming', () => {
+      const { container } = render(
+        <FeedbackDisplay
+          assessment={undefined}
+          feedback="Your response is being evaluated..."
+          attemptNumber={1}
+          isStreaming={true}
+        />
+      )
+
+      expect(screen.getByText(/evaluating/i)).toBeInTheDocument()
+      // Icon should be spinner
+      const icon = container.querySelector('svg[aria-label="Evaluating"]')
+      expect(icon).toBeInTheDocument()
+      expect(icon).toHaveClass('animate-spin')
+    })
+
+    it('uses gray styling for evaluating state', () => {
+      render(
+        <FeedbackDisplay
+          assessment={undefined}
+          feedback="Analyzing your answer..."
+          attemptNumber={1}
+          isStreaming={true}
+        />
+      )
+
+      const container = screen.getByRole('article')
+      expect(container).toHaveClass('bg-gray-50')
     })
   })
 
@@ -83,7 +115,7 @@ describe('FeedbackDisplay', () => {
     it('renders model answer when provided', () => {
       render(
         <FeedbackDisplay
-          assessment="needs_support"
+          assessment="beginning"
           feedback="Here's how an expert might approach this:"
           attemptNumber={3}
           modelAnswer="A model answer would analyze the argument structure..."
@@ -172,7 +204,7 @@ describe('FeedbackDisplay', () => {
 
       render(
         <FeedbackDisplay
-          assessment="needs_support"
+          assessment="beginning"
           feedback="Here's the model answer:"
           attemptNumber={3}
           modelAnswer={longModelAnswer}

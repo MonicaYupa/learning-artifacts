@@ -10,6 +10,7 @@ import psycopg
 from anthropic import APITimeoutError, RateLimitError
 from config.database import execute_query
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from middleware.auth import get_current_user_id
 from models.schemas import (
     ErrorResponse,
@@ -273,3 +274,103 @@ async def generate_new_module(
             public_message="Module generation failed",
             error=e,
         )
+
+
+@router.post(
+    "/modules/generate/stream",
+    status_code=status.HTTP_200_OK,
+    summary="Generate New Module with Streaming",
+    description="Generate a new learning module with progress updates via Server-Sent Events",
+)
+async def generate_new_module_stream(
+    request: ModuleGenerateRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Generate a new learning module with streaming progress updates
+
+    Streams progress events:
+    1. "progress" events with status updates
+    2. "complete" event with final module data
+    3. "error" event if generation fails
+    """
+
+    async def event_generator():
+        try:
+            # Send initial progress
+            yield f"data: {json.dumps({'type': 'progress', 'message': 'Analyzing your request...'})}\n\n"
+
+            # Extract topic and skill level
+            if request.message:
+                extracted = await extract_topic_and_level(request.message)
+                topic = extracted["topic"]
+                skill_level = extracted["skill_level"]
+            elif request.topic and request.skill_level:
+                topic = request.topic
+                skill_level = request.skill_level.value
+            else:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Either message or topic+skill_level required'})}\n\n"
+                return
+
+            # Send extraction complete
+            yield f"data: {json.dumps({'type': 'progress', 'message': f'Creating {skill_level} level exercises on {topic}...'})}\n\n"
+
+            # Generate module
+            module_data = await generate_module(
+                topic=topic,
+                skill_level=skill_level,
+                exercise_count=request.exercise_count,
+            )
+
+            # Send generation complete
+            yield f"data: {json.dumps({'type': 'progress', 'message': 'Finalizing your learning module...'})}\n\n"
+
+            # Store in database
+            query = """
+                INSERT INTO modules (user_id, title, domain, skill_level, exercises)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id, title, domain, skill_level, exercises, created_at
+            """
+
+            exercises_json = json.dumps(module_data["exercises"])
+
+            created_module = execute_query(
+                query,
+                (
+                    user_id,
+                    module_data["title"],
+                    module_data["domain"],
+                    module_data["skill_level"],
+                    exercises_json,
+                ),
+                fetch_one=True,
+            )
+
+            if not created_module:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Failed to store module'})}\n\n"
+                return
+
+            # Convert datetime to string for JSON serialization
+            if "created_at" in created_module and created_module["created_at"]:
+                created_module["created_at"] = created_module["created_at"].isoformat()
+
+            # Send complete with module data
+            yield f"data: {json.dumps({'type': 'complete', 'module': created_module})}\n\n"
+
+        except APITimeoutError as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Request timed out. Please try again.'})}\n\n"
+        except RateLimitError as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Rate limit exceeded. Please try again later.'})}\n\n"
+        except Exception as e:
+            error_msg = safe_error_detail(e)
+            yield f"data: {json.dumps({'type': 'error', 'message': f'Module generation failed: {error_msg}'})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        },
+    )

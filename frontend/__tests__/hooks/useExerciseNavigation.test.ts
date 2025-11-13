@@ -4,6 +4,7 @@ import type { ExerciseMessage } from '@/types/exercise'
 
 describe('useExerciseNavigation', () => {
   const createDefaultProps = (overrides = {}) => ({
+    sessionId: 'test-session-id',
     currentExerciseIndex: 0,
     totalExercises: 3,
     completedExercises: new Set<number>(),

@@ -3,7 +3,17 @@ Authorization and Access Control Tests
 Tests for user isolation and ownership verification
 """
 
+import pytest
 from config.database import execute_query
+from main import app
+
+
+@pytest.fixture(autouse=True, scope="module")
+def cleanup_dependency_overrides():
+    """Ensure app.dependency_overrides is cleared after all tests in module"""
+    yield
+    # Cleanup after entire module completes
+    app.dependency_overrides.clear()
 
 
 class TestModuleAuthorization:
@@ -80,6 +90,7 @@ class TestSessionAuthorization:
                 "answer_text": "Unauthorized attempt",
                 "time_spent_seconds": 10,
                 "hints_used": 0,
+                "exercise_index": 0,
             },
         )
         assert response.status_code == 403
@@ -195,6 +206,7 @@ class TestDataIsolation:
                 "answer_text": "Test answer",
                 "time_spent_seconds": 60,
                 "hints_used": 0,
+                "exercise_index": 0,
             },
         )
         assert response.status_code == 403

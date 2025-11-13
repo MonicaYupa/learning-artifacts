@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { submitAnswer } from '@/lib/api/sessions'
-import type { SubmitResponse } from '@/types/session'
+import { submitAnswerStream } from '@/lib/api/sessions'
+import type { SubmitResponse, AssessmentLevel } from '@/types/session'
 
 interface AnswerSubmissionProps {
-  sessionId: string
+  sessionId: string | null
+  exerciseIndex: number
   hintsUsed: number
   onSubmitSuccess: (response: SubmitResponse, submittedAnswer: string) => void
+  onStreamingUpdate?: (feedback: string, isComplete: boolean, assessment?: AssessmentLevel) => void
   initialAnswer?: string
   renderSubmitButton?: (props: {
     onClick: () => void
@@ -20,8 +22,10 @@ interface AnswerSubmissionProps {
 
 export default function AnswerSubmission({
   sessionId,
+  exerciseIndex,
   hintsUsed,
   onSubmitSuccess,
+  onStreamingUpdate,
   initialAnswer = '',
   renderSubmitButton,
   renderFeedback,
@@ -57,17 +61,53 @@ export default function AnswerSubmission({
     // Store the answer before clearing it
     const submittedAnswer = answer.trim()
 
+    if (!sessionId) {
+      setError('Session not ready. Please wait...')
+      isSubmittingRef.current = false
+      setIsSubmitting(false)
+      return
+    }
+
     try {
-      const response = await submitAnswer(sessionId, {
-        answer_text: submittedAnswer,
-        time_spent_seconds: timeSpentSeconds,
-        hints_used: hintsUsed,
-      })
+      let streamedFeedback = ''
+      let currentAssessment: AssessmentLevel | undefined
 
-      // Reset timer for next attempt
-      startTimeRef.current = Date.now()
+      await submitAnswerStream(
+        sessionId,
+        {
+          answer_text: submittedAnswer,
+          time_spent_seconds: timeSpentSeconds,
+          hints_used: hintsUsed,
+          exercise_index: exerciseIndex,
+        },
+        {
+          onStart: () => {
+            // Stream has started, notify parent
+            onStreamingUpdate?.('', false)
+          },
+          onContent: (text) => {
+            // Accumulate feedback text as it streams
+            streamedFeedback += text
+            onStreamingUpdate?.(streamedFeedback, false, currentAssessment)
+          },
+          onComplete: (response) => {
+            // Stream is complete
+            currentAssessment = response.assessment
+            onStreamingUpdate?.(response.feedback, true, response.assessment)
 
-      onSubmitSuccess(response, submittedAnswer)
+            // Reset timer for next attempt
+            startTimeRef.current = Date.now()
+
+            // Call success callback
+            onSubmitSuccess(response, submittedAnswer)
+          },
+          onError: (errorMessage) => {
+            setError(errorMessage)
+            setIsSubmitting(false)
+            isSubmittingRef.current = false
+          },
+        }
+      )
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to submit answer'
       setError(errorMessage)

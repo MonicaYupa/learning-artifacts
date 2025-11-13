@@ -11,6 +11,7 @@ from anthropic import APITimeoutError, RateLimitError
 from config.constants import ExerciseConstants
 from config.database import execute_query
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from middleware.auth import get_current_user_id
 from models.schemas import (
     AnswerSubmitRequest,
@@ -22,7 +23,12 @@ from models.schemas import (
     SessionResponse,
     SessionUpdateRequest,
 )
-from services.claude_service import evaluate_answer
+from psycopg.types.json import Json
+from services.claude_service import (
+    evaluate_answer,
+    evaluate_answer_stream,
+    generate_single_hint,
+)
 from utils.error_handler import (
     extract_retry_after,
     log_and_raise_http_error,
@@ -405,31 +411,24 @@ async def submit_answer(
                 detail="Cannot submit answer for completed session",
             )
 
-        # Get current exercise
-        current_idx = session["current_exercise_index"]
+        # Get exercise from the request
+        exercise_idx = request.exercise_index
         exercises = session["exercises"]
 
-        if current_idx >= len(exercises):
+        if exercise_idx >= len(exercises):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="All exercises completed",
+                detail="Invalid exercise index",
             )
 
-        current_exercise = exercises[current_idx]
+        current_exercise = exercises[exercise_idx]
 
         # Count attempts for this exercise
         attempts = session["attempts"]
         exercise_attempts = [
-            a for a in attempts if a.get("exercise_index") == current_idx
+            a for a in attempts if a.get("exercise_index") == exercise_idx
         ]
         attempt_number = len(exercise_attempts) + 1
-
-        # Check if max attempts reached
-        if attempt_number > ExerciseConstants.MAX_ATTEMPTS:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Maximum attempts ({ExerciseConstants.MAX_ATTEMPTS}) reached for this exercise",
-            )
 
         # Evaluate answer using Claude
         evaluation = await evaluate_answer(
@@ -440,7 +439,7 @@ async def submit_answer(
 
         # Create attempt record
         attempt = {
-            "exercise_index": current_idx,
+            "exercise_index": exercise_idx,
             "attempt_number": attempt_number,
             "answer_text": request.answer_text,
             "time_spent_seconds": request.time_spent_seconds,
@@ -466,16 +465,12 @@ async def submit_answer(
         # Check if hint is available (if user hasn't used all hints)
         hint_available = request.hints_used < ExerciseConstants.MAX_HINTS
 
-        # Model answer is always available after first submission
-        model_answer_available = True
-
         return {
             "assessment": evaluation["assessment"],
             "internal_score": evaluation["internal_score"],
             "feedback": evaluation["feedback"],
             "attempt_number": attempt_number,
             "hint_available": hint_available,
-            "model_answer_available": model_answer_available,
         }
 
     except HTTPException:
@@ -513,6 +508,168 @@ async def submit_answer(
             public_message="Answer submission failed",
             error=e,
         )
+
+
+@router.post(
+    "/sessions/{session_id}/submit/stream",
+    status_code=status.HTTP_200_OK,
+    summary="Submit Answer with Streaming",
+    description="Submit an answer for evaluation and receive feedback as a stream",
+    responses={
+        404: {"model": ErrorResponse, "description": "Session not found"},
+        403: {
+            "model": ErrorResponse,
+            "description": "Access denied - session belongs to another user",
+        },
+        429: {"model": ErrorResponse, "description": "Claude API rate limit exceeded"},
+    },
+)
+async def submit_answer_stream(
+    session_id: str,
+    request: AnswerSubmitRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Submit an answer for evaluation with streaming feedback
+
+    Returns Server-Sent Events (SSE) with real-time feedback as it's generated.
+
+    Args:
+        session_id: UUID of the session
+        request: Answer submission with text, time spent, and hints used
+        user_id: Current user's ID (from JWT token)
+
+    Returns:
+        StreamingResponse with SSE formatted data
+
+    Raises:
+        403: User doesn't own this session
+        404: Session not found
+        429: Rate limit exceeded
+        500: Evaluation failed
+    """
+
+    async def generate_stream():
+        try:
+            # Verify ownership first
+            await verify_session_ownership(session_id, user_id)
+
+            # Get session and current exercise
+            session_query = """
+                SELECT s.id, s.current_exercise_index, s.attempts, s.status,
+                       m.exercises
+                FROM sessions s
+                JOIN modules m ON s.module_id = m.id
+                WHERE s.id = %s
+            """
+
+            session = execute_query(session_query, (session_id,), fetch_one=True)
+
+            if not session:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Session not found'})}\n\n"
+                return
+
+            if session["status"] == "completed":
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Cannot submit answer for completed session'})}\n\n"
+                return
+
+            # Get exercise from the request
+            exercise_idx = request.exercise_index
+            exercises = session["exercises"]
+
+            if exercise_idx >= len(exercises):
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Invalid exercise index'})}\n\n"
+                return
+
+            current_exercise = exercises[exercise_idx]
+
+            # Count attempts for this exercise
+            attempts = session["attempts"]
+            exercise_attempts = [
+                a for a in attempts if a.get("exercise_index") == exercise_idx
+            ]
+            attempt_number = len(exercise_attempts) + 1
+
+            # Send initial metadata
+            hint_available = request.hints_used < ExerciseConstants.MAX_HINTS
+            yield f"data: {json.dumps({'type': 'start', 'attempt_number': attempt_number, 'hint_available': hint_available})}\n\n"
+
+            # Stream evaluation from Claude
+            evaluation_result = None
+            async for chunk in evaluate_answer_stream(
+                exercise=current_exercise,
+                answer_text=request.answer_text,
+            ):
+                # Parse the chunk to check if it's the complete event
+                if chunk.startswith("data: "):
+                    data_str = chunk[6:].strip()
+                    try:
+                        data = json.loads(data_str)
+                        if data.get("type") == "complete":
+                            evaluation_result = data
+                            # Enrich the complete event with session metadata
+                            enriched_data = {
+                                **data,
+                                "attempt_number": attempt_number,
+                                "hint_available": hint_available,
+                            }
+                            # Send enriched complete event instead of the original
+                            yield f"data: {json.dumps(enriched_data)}\n\n"
+                            continue
+                    except:
+                        pass
+
+                # Forward the chunk to the client
+                yield chunk
+
+            # After streaming is complete, save the attempt to database
+            if evaluation_result:
+                attempt = {
+                    "exercise_index": exercise_idx,
+                    "attempt_number": attempt_number,
+                    "answer_text": request.answer_text,
+                    "time_spent_seconds": request.time_spent_seconds,
+                    "hints_used": request.hints_used,
+                    "assessment": evaluation_result["assessment"],
+                    "internal_score": evaluation_result["internal_score"],
+                    "feedback": evaluation_result["feedback"],
+                    "created_at": datetime.utcnow().isoformat(),
+                }
+
+                # Append attempt to attempts array
+                attempts.append(attempt)
+
+                # Update session with new attempt
+                update_query = """
+                    UPDATE sessions
+                    SET attempts = %s::jsonb
+                    WHERE id = %s
+                """
+
+                execute_query(update_query, (json.dumps(attempts), session_id))
+
+        except HTTPException as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e.detail)})}\n\n"
+        except APITimeoutError as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': 'The Claude API request timed out. Please try again.'})}\n\n"
+        except RateLimitError as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Claude API rate limit exceeded. Please try again later.'})}\n\n"
+        except Exception as e:
+            error_message = str(e)
+            if "rate limit" in error_message.lower() or "429" in error_message:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Claude API rate limit exceeded. Please try again later.'})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Answer submission failed'})}\n\n"
+
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable proxy buffering
+        },
+    )
 
 
 @router.post(
@@ -619,13 +776,38 @@ async def request_hint(
                     detail="All hints have been used for this exercise",
                 )
 
-        # Get hint text (hints are 0-indexed in array, but 1-indexed for user)
+        # Get existing hints or initialize empty list
         hints = current_exercise.get("hints", [])
-        if len(hints) < ExerciseConstants.MAX_HINTS:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Exercise does not have sufficient hints",
-            )
+
+        # Check if the requested hint already exists
+        if len(hints) < hint_level:
+            # Generate the requested hint based on previous hints
+            try:
+                # Get previously generated hints for context
+                previous_hints = hints[: hint_level - 1]
+
+                # Generate only the requested hint
+                new_hint = await generate_single_hint(
+                    current_exercise, hint_level, previous_hints
+                )
+
+                # Add the new hint to the hints list
+                hints.append(new_hint)
+                exercises[current_idx]["hints"] = hints
+
+                # Store the updated exercises back in the database
+                update_query = """
+                    UPDATE modules
+                    SET exercises = %s
+                    WHERE id = (SELECT module_id FROM sessions WHERE id = %s)
+                """
+                execute_query(update_query, (Json(exercises), session_id))
+
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to generate hint: {str(e)}",
+                )
 
         hint_text = hints[hint_level - 1]
         hints_remaining = ExerciseConstants.MAX_HINTS - hint_level

@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import RobotLogo from '@/components/RobotLogo'
+import LoadingModuleCard from '@/components/LoadingModuleCard'
 import type { Exercise, ModuleProgress } from '@/types/exercise'
 
 interface Message {
   role: 'assistant' | 'user'
   content: string
   moduleId?: string // Link message to a module
+  isStreaming?: boolean // Message is currently streaming
+  showLoadingCard?: boolean // Show loading card after message
 }
 
 interface Module {
@@ -174,61 +177,163 @@ export default function ModulePage() {
         return
       }
 
-      // Call backend API to generate module based on user message
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/modules/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          message: userMessage,
-        }),
-      })
+      // Track streaming message index
+      const streamingMessageIndex = messages.length + 1
+      let streamingMessageCreated = false
+
+      // Call backend streaming API to generate module
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/modules/generate/stream`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            message: userMessage,
+          }),
+        }
+      )
 
       if (!response.ok) {
         // API request failed - show helpful error to user
-        const errorData = await response.json().catch(() => null)
-
-        // Provide helpful feedback based on the error
-        let errorMessage = `I'm having trouble understanding what you'd like to learn. Could you provide more details? For example: "I want to learn Python basics as a beginner" or "I'd like to explore advanced machine learning concepts".`
-
         setMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
-            content: errorMessage,
+            content: `I'm having trouble understanding what you'd like to learn. Could you provide more details? For example: "I want to learn Python basics as a beginner" or "I'd like to explore advanced machine learning concepts".`,
           },
         ])
         setLoading(false)
         return
       }
 
-      const data = await response.json()
+      // Handle Server-Sent Events
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let streamedText = ''
 
-      const newModule = {
-        id: data.id,
-        topic: data.title,
-        skill_level: data.skill_level,
-        exercises: data.exercises,
+      if (!reader) {
+        throw new Error('No reader available')
       }
 
-      // Store the module in the modules dictionary
-      setModules((prev) => ({
-        ...prev,
-        [data.id]: newModule,
-      }))
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
 
-      // Add assistant response with module info, linked to the module ID
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: `Great! I've created a learning module on "${data.title}" at the ${data.skill_level} level. Click below to start learning!`,
-          moduleId: data.id,
-        },
-      ])
-      setLoading(false)
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonData = line.slice(6)
+            try {
+              const event = JSON.parse(jsonData)
+
+              if (event.type === 'progress') {
+                // Show only the latest progress message (not accumulated)
+                streamedText = event.message
+
+                // Create or update streaming message
+                if (!streamingMessageCreated) {
+                  setMessages((prev) => [
+                    ...prev,
+                    {
+                      role: 'assistant',
+                      content: streamedText,
+                      isStreaming: true,
+                    },
+                  ])
+                  streamingMessageCreated = true
+                  setLoading(false) // Remove loading dots now that streaming has started
+                } else {
+                  setMessages((prev) => {
+                    const updated = [...prev]
+                    updated[streamingMessageIndex] = {
+                      role: 'assistant',
+                      content: streamedText,
+                      isStreaming: true,
+                    }
+                    return updated
+                  })
+                }
+              } else if (event.type === 'complete') {
+                // Streaming complete - show loading card
+                setMessages((prev) => {
+                  const updated = [...prev]
+                  updated[streamingMessageIndex] = {
+                    role: 'assistant',
+                    content: streamedText,
+                    isStreaming: false,
+                    showLoadingCard: true,
+                  }
+                  return updated
+                })
+
+                // Parse module data
+                const moduleData = event.module
+
+                const newModule = {
+                  id: moduleData.id,
+                  topic: moduleData.title,
+                  skill_level: moduleData.skill_level,
+                  exercises: moduleData.exercises,
+                }
+
+                // Store the module
+                setModules((prev) => ({
+                  ...prev,
+                  [moduleData.id]: newModule,
+                }))
+
+                // Show final message with module card
+                setTimeout(() => {
+                  setMessages((prev) => {
+                    const updated = [...prev]
+                    updated[streamingMessageIndex] = {
+                      role: 'assistant',
+                      content: `Great! I've created a learning module on "${moduleData.title}" at the ${moduleData.skill_level} level. Click below to start learning!`,
+                      moduleId: moduleData.id,
+                      isStreaming: false,
+                      showLoadingCard: false,
+                    }
+                    return updated
+                  })
+                  setLoading(false)
+                }, 800) // Show loading card for 800ms
+              } else if (event.type === 'error') {
+                // Error occurred
+                if (!streamingMessageCreated) {
+                  setMessages((prev) => [
+                    ...prev,
+                    {
+                      role: 'assistant',
+                      content: event.message,
+                      isStreaming: false,
+                    },
+                  ])
+                } else {
+                  setMessages((prev) => {
+                    const updated = [...prev]
+                    updated[streamingMessageIndex] = {
+                      role: 'assistant',
+                      content: event.message,
+                      isStreaming: false,
+                    }
+                    return updated
+                  })
+                }
+                setLoading(false)
+                break
+              }
+            } catch (e) {
+              // Skip malformed JSON
+              console.error('Failed to parse SSE event:', e)
+            }
+          }
+        }
+      }
     } catch (err) {
       // Only catch unexpected errors (network failures, etc)
       console.error('Unexpected error during module generation:', err)
@@ -308,9 +413,18 @@ export default function ModulePage() {
                             </span>
                           </div>
                           <div className="pl-6 sm:pl-8">
-                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-200 sm:text-base">
+                            <p
+                              className={`whitespace-pre-wrap leading-relaxed ${
+                                message.isStreaming
+                                  ? 'animate-pulse font-mono text-xs italic text-neutral-400 sm:text-sm'
+                                  : 'text-sm text-neutral-200 sm:text-base'
+                              }`}
+                            >
                               {message.content}
                             </p>
+
+                            {/* Show loading card while module is being finalized */}
+                            {message.showLoadingCard && <LoadingModuleCard />}
 
                             {/* Show module card if this message has an associated module */}
                             {message.moduleId && modules[message.moduleId] && (
@@ -338,12 +452,12 @@ export default function ModulePage() {
                                     </div>
                                     <div className="min-w-0 flex-1">
                                       <div className="flex items-center gap-2">
-                                        <h3 className="text-sm font-semibold text-neutral-100">
+                                        <h3 className="min-w-0 flex-1 text-sm font-semibold text-neutral-100">
                                           {modules[message.moduleId].topic}
                                         </h3>
                                         {moduleStatuses[message.moduleId] && (
                                           <span
-                                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                            className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
                                               moduleStatuses[message.moduleId] === 'Completed'
                                                 ? 'bg-green-500/20 text-green-400'
                                                 : moduleStatuses[message.moduleId] === 'In Progress'

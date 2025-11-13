@@ -39,7 +39,7 @@ export default function FrameworkExercise({ prompt, scaffold, material }: Framew
                         clipRule="evenodd"
                       />
                     </svg>
-                    {key}
+                    {key.replace(/_/g, ' ')}
                   </div>
                   <div className="pr-10 text-sm leading-relaxed text-neutral-800">{value}</div>
                 </div>

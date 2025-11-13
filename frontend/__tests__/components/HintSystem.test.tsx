@@ -86,7 +86,7 @@ describe('HintSystem', () => {
 
       // Should have called the API and callback
       await waitFor(() => {
-        expect(mockRequestHint).toHaveBeenCalledWith(mockSessionId)
+        expect(mockRequestHint).toHaveBeenCalledWith(mockSessionId, 1)
         expect(onHintReceived).toHaveBeenCalledWith(mockHintResponse1)
       })
     })

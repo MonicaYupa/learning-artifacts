@@ -22,9 +22,10 @@ Traditional AI interactions can make users passive observers. This platform crea
 **Backend**
 - FastAPI
 - Python 3.9+
-- PostgreSQL (Supabase)
-- Anthropic Claude API
+- PostgreSQL (Supabase) with Psycopg3 connection pooling
+- Anthropic Claude API (Sonnet 4)
 - JWT Authentication (RS256)
+- Sentry (backend error tracking)
 
 **DevOps**
 - Frontend: Vercel
@@ -38,10 +39,10 @@ Traditional AI interactions can make users passive observers. This platform crea
 │                         Frontend                            │
 │                  (Next.js + TypeScript)                     │
 │                                                             │
-│  ┌──────────┐  ┌──────────┐  ┌─────────────────────────┐  │
-│  │  Auth    │  │  Module  │  │  Session Management     │  │
-│  │  (SSR)   │  │  Display │  │  (Hints, Submissions)   │  │
-│  └──────────┘  └──────────┘  └─────────────────────────┘  │
+│  ┌──────────┐  ┌──────────┐  ┌─────────────────────────┐    │
+│  │  Auth    │  │  Module  │  │  Session Management     │    │
+│  │  (SSR)   │  │  Display │  │  (Hints, Submissions)   │    │
+│  └──────────┘  └──────────┘  └─────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
                             │
                     REST API (HTTP/JSON)
@@ -50,10 +51,10 @@ Traditional AI interactions can make users passive observers. This platform crea
 │                        Backend                              │
 │                    (FastAPI + Python)                       │
 │                                                             │
-│  ┌──────────────┐  ┌─────────────┐  ┌──────────────────┐  │
-│  │  JWT Auth    │  │  Module     │  │  Answer          │  │
-│  │  Middleware  │  │  Generator  │  │  Evaluator       │  │
-│  └──────────────┘  └─────────────┘  └──────────────────┘  │
+│  ┌──────────────┐  ┌─────────────┐  ┌──────────────────┐    │
+│  │  JWT Auth    │  │  Module     │  │  Answer          │    │
+│  │  Middleware  │  │  Generator  │  │  Evaluator       │    │
+│  └──────────────┘  └─────────────┘  └──────────────────┘    │
 │                            │                                │
 │                    Claude API Client                        │
 └─────────────────────────────────────────────────────────────┘
@@ -63,7 +64,7 @@ Traditional AI interactions can make users passive observers. This platform crea
 ┌─────────────────────────────────────────────────────────────┐
 │                    Database (Supabase)                      │
 │                                                             │
-│        Users  │  Modules  │  Sessions  │  Attempts         │
+│        Users  │  Modules  │  Sessions  │  Attempts          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -73,23 +74,27 @@ Traditional AI interactions can make users passive observers. This platform crea
 learning-artifacts/
 ├── frontend/              # Next.js application
 │   ├── app/              # Next.js App Router pages
-│   │   ├── auth/         # Authentication pages
-│   │   ├── dashboard/    # Main dashboard
-│   │   └── learning/     # Learning session interface
-│   ├── components/       # Reusable React components
-│   ├── contexts/         # React contexts (auth, etc.)
-│   ├── hooks/            # Custom React hooks
-│   ├── lib/              # Utilities and API clients
-│   └── types/            # TypeScript definitions
+│   │   ├── auth/login/   # Login page
+│   │   ├── auth/signup/  # Signup page
+│   │   ├── module/       # Module list and chat interface
+│   │   └── module/[id]/  # Individual module learning interface
+│   ├── components/       # React components
+│   │   ├── exercises/    # Exercise type components
+│   │   └── module/       # Module-specific components
+│   ├── contexts/         # ModuleContext for state management
+│   ├── hooks/            # Custom hooks (navigation, progress, state)
+│   ├── lib/              # API clients, Supabase, utilities
+│   ├── types/            # TypeScript definitions
+│   └── __tests__/        # Frontend tests
 │
 ├── backend/              # FastAPI application
-│   ├── config/           # Settings and database utilities
-│   ├── middleware/       # JWT authentication
+│   ├── config/           # Settings, database, constants, Sentry
+│   ├── middleware/       # JWT auth, error context
 │   ├── models/           # Pydantic schemas
-│   ├── routers/          # API endpoints
-│   ├── services/         # Business logic (Claude integration)
-│   ├── utils/            # Helper functions
-│   ├── migrations/       # Database migrations
+│   ├── routers/          # API endpoints (health, modules, sessions)
+│   ├── services/         # Claude integration, retry/timeout handling
+│   ├── utils/            # Error handling, security
+│   ├── migrations/       # SQL database migrations
 │   └── tests/            # Backend tests
 │
 └── package.json          # Root package for tooling (Prettier, Husky)
@@ -140,6 +145,8 @@ cp .env.example .env
 # - SUPABASE_SERVICE_ROLE_KEY
 # - DATABASE_URL
 # - ANTHROPIC_API_KEY
+# - CORS_ORIGINS (optional, defaults to localhost:3000)
+# - SENTRY_DSN (optional, for error tracking)
 
 # Run development server
 python main.py
@@ -185,14 +192,20 @@ pytest
 
 ## Key Features
 
-- **AI Module Generation**: Claude generates customized learning modules based on user-specified topics
+- **AI Module Generation**: Claude generates customized learning modules from user natural language topics and skill levels
+  - Chat-like interface with streaming generation
+  - 3 exercises per module with estimated completion time
 - **Progressive Exercises**: Three exercise types with increasing complexity
   - Analysis: Break down concepts and explain key components
   - Comparative Evaluation: Compare approaches and identify trade-offs
   - Structured Framework: Build comprehensive mental models
-- **Interactive Hints**: Progressive hint system that reveals support incrementally
-- **Immediate Feedback**: Real-time evaluation and specific guidance on submissions
-- **Session Tracking**: Monitor progress, attempts, and confidence ratings
+- **Interactive Hints**: Progressive 3-level hint system with on-demand generation
+- **Streaming Feedback**: Real-time evaluation with specific guidance on submissions
+- **Session Tracking**: Full progress persistence with localStorage backup
+  - Multiple attempts per exercise
+  - Confidence ratings and time tracking
+- **Celebration UX**: Confetti animation on strong exercise submissions
+- **Mobile Responsive**: Tab-based navigation optimized for all screen sizes
 
 ## API Endpoints
 
@@ -204,16 +217,18 @@ pytest
 - Managed via Supabase Auth (JWT tokens)
 
 ### Modules
-- `POST /api/modules/generate` - Generate new module
+- `POST /api/modules/generate` - Generate new module from topic/skill level
+- `POST /api/modules/generate/stream` - Generate module with streaming (SSE)
 - `GET /api/modules` - List user's modules
 - `GET /api/modules/{id}` - Get module details
 
 ### Sessions
 - `POST /api/sessions` - Start new session
-- `GET /api/sessions/{id}` - Get session state
-- `POST /api/sessions/{id}/submit` - Submit answer
-- `POST /api/sessions/{id}/hint` - Request hint
-- `PATCH /api/sessions/{id}` - Update session
+- `GET /api/sessions/{id}` - Get session state with attempt history
+- `POST /api/sessions/{id}/submit` - Submit answer for evaluation
+- `POST /api/sessions/{id}/submit/stream` - Submit with streaming feedback (SSE)
+- `POST /api/sessions/{id}/hint` - Request progressive hint
+- `PATCH /api/sessions/{id}` - Update session (exercise index, status, confidence)
 
 ## Development
 

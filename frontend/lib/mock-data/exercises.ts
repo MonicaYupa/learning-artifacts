@@ -89,34 +89,14 @@ export function getMockModule() {
 
 // Mock hint response generator
 export function getMockHintResponse() {
-  currentHintLevel = (currentHintLevel % 3) + 1
+  currentHintLevel = Math.min(currentHintLevel + 1, 3)
 
-  const hints = [
-    'Start by identifying the thesis statement or main claim of the argument.',
-    'Look at both the supporting evidence and counter-arguments presented.',
-    'Consider whether the statistics and claims are adequately supported or if there are logical gaps.',
-  ]
+  const hintText = `This is hint ${currentHintLevel} for this exercise. In a real scenario, Claude would generate a progressive hint based on your current progress and the exercise context.`
 
   return {
-    hint: hints[currentHintLevel - 1],
+    hint_text: hintText,
     hint_level: currentHintLevel,
-    remaining_hints: 3 - currentHintLevel,
-    session: {
-      id: mockSessionId,
-      module_id: mockModule.id,
-      user_id: 'demo-user',
-      current_exercise_index: 0,
-      current_attempt_number: 1,
-      hints_requested: hints.slice(0, currentHintLevel).map((hint, i) => ({
-        level: i + 1,
-        content: hint,
-        timestamp: new Date().toISOString(),
-      })),
-      attempts: [],
-      status: 'in_progress' as const,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
+    hints_remaining: 3 - currentHintLevel,
   }
 }
 
@@ -140,7 +120,6 @@ export function getMockSubmitResponse(submission: {
         'Good start! Your analysis identifies some key points, but consider expanding on the relationship between the evidence and the conclusions. Think about the assumptions underlying the argument.',
       attempt_number: 1,
       hint_available: true,
-      model_answer_available: false,
     }
   } else if (attemptCount === 2) {
     // Second attempt - strong (to show auto-advance)
@@ -153,38 +132,17 @@ export function getMockSubmitResponse(submission: {
         'Excellent analysis! You correctly identified the main argument, evaluated the supporting evidence, and noted the potential weaknesses in the reasoning. Your critical thinking demonstrates a strong understanding of the material.',
       attempt_number: 2,
       hint_available: false,
-      model_answer_available: false,
     }
   } else {
-    // Third attempt - show model answer
+    // Third attempt
     attemptCount = 0
     currentHintLevel = 0
     return {
-      assessment: 'needs_support' as const,
+      assessment: 'beginning' as const,
       internal_score: 0.4,
       feedback: "Here's how an expert might approach this exercise:",
       attempt_number: 3,
       hint_available: false,
-      model_answer_available: true,
-      model_answer: `A comprehensive analysis would include:
-
-1. **Main Argument**: AI workplace transformation will displace 40% of jobs but create new opportunities requiring different skills.
-
-2. **Supporting Evidence**:
-   - Productivity gains of 25-35% for companies implementing AI
-   - Automation of repetitive tasks and data analysis
-   - Survey showing 85% of displaced workers struggle to transition
-
-3. **Weaknesses in Reasoning**:
-   - Assumes new jobs will be created at sufficient scale
-   - Doesn't account for the time lag in retraining programs
-   - Limited evidence for the "creative work" claim
-   - Statistics lack context (which industries, which roles?)
-
-4. **Critical Questions**:
-   - Are the productivity gains evenly distributed?
-   - What support exists for workers in transition?
-   - How does the speed of change affect different demographics?`,
     }
   }
 }

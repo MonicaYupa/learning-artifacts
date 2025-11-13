@@ -18,6 +18,13 @@ def init_sentry():
     - Graceful error handling if initialization fails
     """
     try:
+        import os
+
+        # Skip Sentry initialization during tests
+        if os.getenv("TESTING") == "true":
+            print("Sentry disabled for test environment")
+            return
+
         # Import settings here to ensure .env is loaded
         from config.settings import settings
 
@@ -35,9 +42,6 @@ def init_sentry():
         if environment == "production":
             traces_sample_rate = 0.2  # 20% of transactions in production
             profiles_sample_rate = 0.2  # 20% profile sampling in production
-        elif environment == "staging":
-            traces_sample_rate = 0.5  # 50% in staging
-            profiles_sample_rate = 0.5
         else:  # development
             traces_sample_rate = 1.0  # 100% in development
             profiles_sample_rate = 1.0
@@ -48,11 +52,10 @@ def init_sentry():
             release=release,
             traces_sample_rate=traces_sample_rate,
             profiles_sample_rate=profiles_sample_rate,
-            # FastAPI integration is automatically enabled when fastapi is installed
-            send_default_pii=False,  # Don't send PII for privacy
+            send_default_pii=False,
             attach_stacktrace=True,
             max_breadcrumbs=50,
-            debug=environment == "development",
+            debug=False,  # Disable debug logging to prevent shutdown errors
         )
 
         print(f"✓ Sentry initialized for {environment} environment")
